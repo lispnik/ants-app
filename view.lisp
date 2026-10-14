@@ -1,0 +1,465 @@
+;;;; view.lisp -- the game drawn by SpriteKit.
+;;;;
+;;;; The scene is a Lisp subclass of SKScene whose update: steps the model
+;;;; and then drains its events: a box deployed, an ant sent, a cube picked
+;;;; up, an ant down a hole, a box emptied, the round over.  Each becomes a
+;;;; node added, moved or removed.  Ants are the only thing moved every
+;;;; frame; everything else moves by SKAction, once.
+;;;;
+;;;; A tap is a UITapGestureRecognizer on the SKView, its point converted
+;;;; into the scene's coordinates and hit-tested here, in Lisp.
+
+(in-package #:ants)
+
+(defvar *view* nil "The SKView.")
+(defvar *scene* nil "The scene, an ANT-SCENE.")
+(defvar *world* nil "The node holding everything in the current round.")
+(defvar *game* nil)
+(defvar *level-index* 0)
+(defvar *cubes* nil "The cube nodes, an array like the game's grid.")
+(defvar *status* nil)
+(defvar *overlay* nil)
+(defvar *more-labels* nil "Per queue column, the label counting boxes not drawn.")
+(defvar *last-time* nil)
+(defvar *shown-left* nil "The cube count the status line last showed.")
+
+;;; ------------------------------------------------------------------
+;;; nodes
+
+(defun point (x y)
+  (vector (float x 1d0) (float y 1d0)))
+
+(defun rgb (char &optional (shade 1))
+  (destructuring-bind (r g b) (colour-rgb char)
+    (ui:color (* r shade) (* g shade) (* b shade))))
+
+(defun add (parent child)
+  (objc:invoke parent "addChild:" child)
+  child)
+
+(defun at (node x y)
+  (objc:invoke node "setPosition:" (point x y))
+  node)
+
+(defun z (node z)
+  (objc:invoke node "setZPosition:" (float z 1d0))
+  node)
+
+(defun rect-sprite (colour width height)
+  (objc:invoke "SKSpriteNode" "spriteNodeWithColor:size:" colour (point width height)))
+
+(defun rounded (width height radius fill &optional stroke (line-width 2))
+  (let ((node (objc:invoke "SKShapeNode" "shapeNodeWithRect:cornerRadius:"
+                           (vector (- (/ width 2d0)) (- (/ height 2d0))
+                                   (float width 1d0) (float height 1d0))
+                           (float radius 1d0))))
+    (objc:invoke node "setFillColor:" fill)
+    (objc:invoke node "setStrokeColor:" (or stroke (ui:color 0 0 0 0)))
+    (objc:invoke node "setLineWidth:" (float line-width 1d0))
+    node))
+
+(defun ellipse (width height fill stroke)
+  (let ((node (objc:invoke "SKShapeNode" "shapeNodeWithEllipseOfSize:" (point width height))))
+    (objc:invoke node "setFillColor:" fill)
+    (objc:invoke node "setStrokeColor:" stroke)
+    (objc:invoke node "setLineWidth:" 2d0)
+    node))
+
+(defun text (string size colour &key (font "AvenirNext-Bold"))
+  (let ((node (objc:invoke "SKLabelNode" "labelNodeWithFontNamed:" font)))
+    (objc:invoke node "setText:" string)
+    (objc:invoke node "setFontSize:" (float size 1d0))
+    (objc:invoke node "setFontColor:" colour)
+    (objc:invoke node "setVerticalAlignmentMode:" 1) ; centre
+    node))
+
+;;; SKActions.
+
+(defun action (name &rest arguments)
+  (apply #'objc:invoke "SKAction" name arguments))
+
+(defun run (node &rest actions)
+  "Run ACTIONS on NODE one after another."
+  (objc:invoke node "runAction:"
+               (if (rest actions)
+                   (action "sequence:" (coerce actions 'vector))
+                   (first actions))))
+
+(defun move-to (x y &optional (seconds 0.2d0))
+  (action "moveTo:duration:" (point x y) (float seconds 1d0)))
+
+(defun scale-to (scale &optional (seconds 0.15d0))
+  (action "scaleTo:duration:" (float scale 1d0) (float seconds 1d0)))
+
+(defun vanish (node &optional (seconds 0.15d0))
+  "Shrink NODE away and take it out of the scene.  Nothing may touch it after."
+  (run node (scale-to 0 seconds) (action "removeFromParent")))
+
+(defun jump-in (node hole)
+  "NODE, standing at the edge of HOLE, drops into it: down to the middle,
+shrinking and fading as it goes, then out of the scene."
+  (z node 1)                                  ; under the ants still walking
+  (run node
+       (action "group:" (vector (move-to (car hole) (cdr hole) 0.22d0)
+                                (scale-to 0.2d0 0.22d0)
+                                (action "fadeOutWithDuration:" 0.22d0)))
+       (action "removeFromParent")))
+
+(defun shake (node)
+  (run node
+       (action "moveByX:y:duration:" 6d0 0d0 0.04d0)
+       (action "moveByX:y:duration:" -12d0 0d0 0.08d0)
+       (action "moveByX:y:duration:" 6d0 0d0 0.04d0)))
+
+(defun haptic (&optional (style 0))
+  (objc:invoke (objc:invoke (objc:invoke "UIImpactFeedbackGenerator" "alloc") "initWithStyle:" style)
+               "impactOccurred"))
+
+;;; ------------------------------------------------------------------
+;;; the round's pieces
+
+(defun make-cube (char size)
+  "A cube: its colour, with a lighter top edge and a darker bottom one."
+  (let* ((face (- size 2))
+         (node (rect-sprite (rgb char) face face)))
+    (add node (at (rect-sprite (ui:color 1 1 1 0.30) face (* face 0.22)) 0 (* face 0.39)))
+    (add node (at (rect-sprite (ui:color 0 0 0 0.18) face (* face 0.16)) 0 (* face -0.42)))
+    node))
+
+(defun text-colour (char)
+  (if (light-colour-p char) (ui:color 0.15 0.12 0.12) (ui:color 1 1 1)))
+
+(defun make-box-node (box)
+  (let* ((char (box-colour box))
+         (node (rounded *box-width* *box-height* 10 (rgb char) (rgb char 0.6) 3)))
+    ;; The door the ants come out of.
+    (add node (at (rounded 22 9 4 (ui:color 0.12 0.09 0.08)) 0 (- (/ *box-height* 2) 9)))
+    (let ((label (text (princ-to-string (box-count box)) 22 (text-colour char))))
+      (add node (at label 0 -5))
+      (setf (box-label box) label))
+    (setf (box-node box) node)
+    node))
+
+(defun make-ant-node (ant)
+  (let* ((char (box-colour (ant-box ant)))
+         (node (rect-sprite (rgb char 0.9) 6 8)))
+    ;; Legs, under the body; a head in front of it.
+    (add node (z (at (rect-sprite (ui:color 0.1 0.08 0.08) 12 1.5d0) 0 2) -1))
+    (add node (z (at (rect-sprite (ui:color 0.1 0.08 0.08) 12 1.5d0) 0 -2) -1))
+    (add node (at (rect-sprite (rgb char 0.55) 5 5) 0 6))
+    (z (at node (ant-x ant) (ant-y ant)) 20)
+    (setf (ant-node ant) node)
+    node))
+
+(defun layout-queue (game &key (animate t))
+  "Put every queued box where it belongs: the front row bright and
+tappable, the rows behind dimmed, the rest hidden and counted."
+  (loop for column across (game-columns game)
+        for k from 0
+        for x = (column-x game k)
+        do (loop for box in column
+                 for row from 0
+                 for node = (box-node box)
+                 for y = (queue-y row)
+                 do (objc:invoke node "setHidden:" (>= row *queue-visible*))
+                    (objc:invoke node "setAlpha:" (if (zerop row) 1d0 0.55d0))
+                    (if animate (run node (move-to x y 0.18d0)) (at node x y)))
+           (let ((more (- (length column) *queue-visible*))
+                 (label (aref *more-labels* k)))
+             (objc:invoke label "setText:" (if (plusp more) (format nil "+~d more" more) "")))))
+
+(defun update-status (game)
+  (unless (eql *shown-left* (game-cubes-left game))
+    (setf *shown-left* (game-cubes-left game))
+    (objc:invoke *status* "setText:"
+                 (format nil "~a  ·  ~d left" (level-name (game-level game)) (game-cubes-left game)))))
+
+(defun build-round (game)
+  "Every node of a fresh round, under a new world node."
+  (when *world* (objc:invoke *world* "removeFromParent"))
+  (setf *world* (add *scene* (objc:invoke "SKNode" "node"))
+        *overlay* nil
+        *shown-left* nil
+        *last-time* nil)
+  (let* ((size (game-cell-size game))
+         (w (game-w game))
+         (h (game-h game))
+         (grid (game-grid game))
+         (plate-w (* (+ w 0.7d0) size))
+         (plate-h (* (+ h 0.7d0) size)))
+    ;; Title, and a restart button.
+    (setf *status* (add *world* (at (text "" 18 (ui:color 1 1 1)) (/ *scene-width* 2) 776)))
+    (add *world* (at (text (format nil "~d/~d" (1+ *level-index*) (length *levels*)) 15
+                           (ui:color 1 1 1 0.6) :font "AvenirNext-DemiBold")
+                     28 776))
+    (add *world* (at (rounded 70 28 8 (ui:color 1 1 1 0.15)) 345 776))
+    (add *world* (at (text "Restart" 14 (ui:color 1 1 1) :font "AvenirNext-DemiBold") 345 776))
+    ;; The plate and the picture on it.
+    (add *world* (at (rounded plate-w plate-h 8 (ui:color 0.80 0.78 0.74) (ui:color 0.55 0.53 0.50) 2)
+                     (/ *scene-width* 2) (- *plate-top* (/ (* h size) 2))))
+    (setf *cubes* (make-array (list h w) :initial-element nil))
+    (dotimes (r h)
+      (dotimes (c w)
+        (let ((char (aref grid r c)))
+          (when char
+            (setf (aref *cubes* r c)
+                  (add *world* (z (at (make-cube char size) (cell-x game c) (cell-y game r)) 5)))))))
+    ;; Holes.
+    (dolist (side '(:left :right))
+      (destructuring-bind (x . y) (hole-point game side)
+        (add *world* (at (ellipse 30 17 (ui:color 0.05 0.04 0.03) (ui:color 0.30 0.22 0.14)) x y))))
+    ;; Deployment slots.
+    (dotimes (slot (length (game-slots game)))
+      (add *world* (at (rounded (+ *box-width* 6) (+ *box-height* 6) 12
+                                (ui:color 0 0 0 0.18) (ui:color 1 1 1 0.35) 1.5d0)
+                       (slot-x game slot) *slot-y*)))
+    ;; The queue.
+    (setf *more-labels* (make-array (length (game-columns game))))
+    (loop for column across (game-columns game)
+          for k from 0
+          do (dolist (box column)
+               (add *world* (z (make-box-node box) 10)))
+             (setf (aref *more-labels* k)
+                   (add *world* (at (text "" 13 (ui:color 1 1 1 0.7) :font "AvenirNext-DemiBold")
+                                    (column-x game k) (- (queue-y *queue-visible*) -26)))))
+    (layout-queue game :animate nil)
+    (update-status game)))
+
+(defun pick-up (ant)
+  "The ant's cube, carried in front of its head."
+  (setf (ant-load ant)
+        (add (ant-node ant) (at (make-cube (box-colour (ant-box ant)) 9) 0 11))))
+
+(defun set-down (ant)
+  "The ant stops to rest: the cube it carries goes on the ground in front of
+it, under the ants walking by, until REST-END picks it up again."
+  (when (ant-load ant)
+    (objc:invoke (ant-load ant) "removeFromParent")
+    (setf (ant-load ant) nil))
+  (let ((heading (ant-heading ant)))
+    (setf (ant-dropped ant)
+          (add *world* (z (at (make-cube (box-colour (ant-box ant)) 9)
+                              (+ (ant-x ant) (* 12 (cos heading)))
+                              (+ (ant-y ant) (* 12 (sin heading))))
+                          15)))))
+
+(defun show-overlay (title subtitle colour)
+  (let ((panel (z (at (rounded 300 150 18 (ui:color 0.08 0.08 0.10 0.92) colour 3)
+                      (/ *scene-width* 2) 560)
+                  100)))
+    (add panel (at (text title 34 colour) 0 22))
+    (add panel (at (text subtitle 16 (ui:color 1 1 1 0.85) :font "AvenirNext-DemiBold") 0 -28))
+    (objc:invoke panel "setScale:" 0.6d0)
+    (add *world* panel)
+    (run panel (scale-to 1 0.2d0))
+    (setf *overlay* panel)))
+
+;;; ------------------------------------------------------------------
+;;; events from the model
+
+(defun handle (game event)
+  (destructuring-bind (kind &rest arguments) event
+    (ecase kind
+      (:deploy
+       (destructuring-bind (box slot column) arguments
+         (declare (ignore column))
+         (let ((node (box-node box)))
+           (objc:invoke node "setAlpha:" 1d0)
+           (run node (move-to (slot-x game slot) *slot-y* 0.22d0)))
+         (layout-queue game)))
+      (:spawn
+       (add *world* (make-ant-node (first arguments))))
+      (:pickup
+       (destructuring-bind (ant r c) arguments
+         (let ((cube (aref *cubes* r c)))
+           (setf (aref *cubes* r c) nil)
+           (when cube (vanish cube 0.12d0)))
+         (pick-up ant)))
+      (:rest-start
+       (set-down (first arguments)))
+      (:rest-end
+       (let ((ant (first arguments)))
+         (when (ant-dropped ant)
+           (vanish (ant-dropped ant) 0.1d0)
+           (setf (ant-dropped ant) nil))
+         (pick-up ant)))
+      (:escape
+       (let* ((ant (first arguments))
+              (box (ant-box ant)))
+         (jump-in (ant-node ant) (ant-hole ant))
+         (setf (ant-node ant) nil)
+         (objc:invoke (box-label box) "setText:" (princ-to-string (box-count box)))))
+      (:box-done
+       (let ((box (first arguments)))
+         (vanish (box-node box) 0.25d0)
+         (setf (box-node box) nil (box-label box) nil)))
+      (:won
+       (haptic 2)
+       (show-overlay "Cleared!"
+                     (if (< (1+ *level-index*) (length *levels*)) "Tap for the next picture" "Tap to play again")
+                     (ui:color 0.55 0.95 0.55)))
+      (:lost
+       (haptic 2)
+       (show-overlay "Stuck!" "No ants can reach a cube. Tap to retry." (ui:color 1.0 0.55 0.45))))))
+
+(defparameter *sway* 1.6d0 "Points an ant sways to either side as it walks.")
+(defparameter *stride* 0.35d0 "Radians of sway per point walked.")
+(defparameter *wobble* 0.18d0 "Radians an ant's heading swings as it walks.")
+
+(defun draw-ants (game)
+  "Each ant where the model has it, swaying across its line of travel and
+swinging its head in time with its stride, so no two walk in lockstep.
+The sway is drawn only: it never takes an ant off its route."
+  (dolist (ant (game-ants game))
+    (let ((node (ant-node ant)))
+      (when node
+        (let* ((heading (ant-heading ant))
+               (step (+ (ant-gait ant) (* *stride* (ant-walked ant))))
+               (sway (* *sway* (sin step))))
+          (objc:invoke node "setPosition:"
+                       (point (- (ant-x ant) (* sway (sin heading)))
+                              (+ (ant-y ant) (* sway (cos heading)))))
+          ;; The ant's drawing faces up the screen; its heading is from +x.
+          (objc:invoke node "setZRotation:"
+                       (+ (- heading (/ pi 2)) (* *wobble* (cos step)))))))))
+
+(defun frame (dt)
+  (let ((game *game*))
+    (when game
+      (step-game game dt)
+      (dolist (event (take-events game))
+        (handle game event))
+      (draw-ants game)
+      (update-status game))))
+
+;;; ------------------------------------------------------------------
+;;; the scene
+
+(objc:define-objc-class ant-scene () ()
+  (:objc-class-name "LispAntScene")
+  (:objc-superclass-name "SKScene"))
+
+(defvar *failed* nil "Set when a frame signals, so one error is reported once.")
+
+(objc:define-objc-method ("update:" :void)
+    ((self ant-scene) (time :double))
+  (let ((dt (if *last-time* (min 0.05d0 (max 0d0 (- time *last-time*))) (/ 1d0 60))))
+    (setf *last-time* time)
+    (unless *failed*
+      (handler-case (frame dt)
+        (error (condition)
+          (setf *failed* t)
+          (format *error-output* "~&ants: frame failed: ~a~%" condition)
+          (finish-output *error-output*))))))
+
+;;; ------------------------------------------------------------------
+;;; rounds and taps
+
+(defun start-level (index)
+  (setf *level-index* (mod index (length *levels*))
+        *game* (new-game (nth *level-index* *levels*))
+        *failed* nil)
+  (build-round *game*)
+  (format t "ANTS: level ~a, ~d cubes, ~d boxes, seed ~a~%"
+          (level-name (game-level *game*)) (game-cubes-left *game*)
+          (reduce #'+ (game-columns *game*) :key #'length) (game-seed *game*))
+  (finish-output))
+
+(defun within (x y cx cy half-width half-height)
+  (and (<= (abs (- x cx)) half-width) (<= (abs (- y cy)) half-height)))
+
+(defun tap-at (x y)
+  (let ((game *game*))
+    (cond ((null game))
+          (*overlay*
+           (start-level (if (eq (game-state game) :won) (1+ *level-index*) *level-index*)))
+          ((within x y 345 776 40 20)
+           (start-level *level-index*))
+          (t
+           (loop for column across (game-columns game)
+                 for k from 0
+                 for cx = (column-x game k)
+                 do (loop for box in column
+                          for row below *queue-visible*
+                          when (within x y cx (queue-y row) (/ *box-width* 2) (/ *queue-step* 2))
+                            do (cond ((and (zerop row) (deploy game k))
+                                      (haptic 0))
+                                     (t (shake (box-node box))))
+                               (return-from tap-at)))))))
+
+(defun tap-view-point (in-view)
+  "A tap at IN-VIEW, a point in the SKView's coordinates (y down)."
+  (let ((in-scene (objc:invoke *scene* "convertPointFromView:" in-view)))
+    (tap-at (aref in-scene 0) (aref in-scene 1))))
+
+(defun tapped (recognizer)
+  (tap-view-point (objc:invoke recognizer "locationInView:" *view*)))
+
+;;; ------------------------------------------------------------------
+;;; autoplay, for watching a round without touching the screen
+;;;
+;;;   SIMCTL_CHILD_ANTS_AUTOPLAY=1 xcrun simctl launch booted org.lisp.ants-app
+;;;
+;;; Every half second it taps, through TAP-AT, the front box of a column
+;;; whose colour has a cube within reach, or any box once the board is idle;
+;;; and the overlay when a round ends.  ANTS_AUTOPLAY=careless taps a
+;;; column at random, which usually loses; ANTS_LEVEL=n starts at level n, from 1.
+
+(defun autotap (x y)
+  "Tap the scene point (X Y) as a finger would: by way of the view."
+  (tap-view-point (objc:invoke *scene* "convertPointToView:" (point x y))))
+
+(defvar *overlay-ticks* 0)
+(defvar *careless* nil)
+
+(defun autoplay-tick ()
+  (let ((game *game*))
+    (cond ((null game))
+          (*overlay*
+           ;; Leave the result up long enough to be read.
+           (when (>= (incf *overlay-ticks*) 5)
+             (setf *overlay-ticks* 0)
+             (autotap (/ *scene-width* 2) 560)))
+          ((free-slot game)
+           (let ((k (or (and *careless*
+                             (let ((open (loop for column across (game-columns game)
+                                               for k from 0 when column collect k)))
+                               (when open (nth (random (length open)) open))))
+                        (loop for column across (game-columns game)
+                              for k from 0
+                              when (and column (reachable-cubes (game-grid game) (box-colour (first column))
+                                                                (game-reserved game)))
+                                return k)
+                        (and (null (game-ants game))
+                             (position-if #'identity (game-columns game))))))
+             (when k (autotap (column-x game k) (queue-y 0))))))))
+
+(defun start ()
+  (objc:ensure-objc-initialized)
+  (let* ((root (ui:root-view))
+         (safe (objc:invoke root "safeAreaLayoutGuide"))
+         (view (ui:new "SKView"))
+         (background (ui:color 0.26 0.34 0.22)))
+    (objc:invoke root "setBackgroundColor:" background)
+    (objc:invoke root "addSubview:" view)
+    (ui:pin view "topAnchor" safe "topAnchor")
+    (ui:pin view "bottomAnchor" safe "bottomAnchor")
+    (ui:pin view "leadingAnchor" safe "leadingAnchor")
+    (ui:pin view "trailingAnchor" safe "trailingAnchor")
+    (let ((scene (objc:invoke (make-instance 'ant-scene) "initWithSize:"
+                              (point *scene-width* *scene-height*))))
+      (objc:invoke scene "setBackgroundColor:" background)
+      (objc:invoke scene "setScaleMode:" 1)        ; aspect fit
+      (setf *view* (ui:keep view)
+            *scene* (ui:keep scene))
+      (start-level (let ((n (ext:getenv "ANTS_LEVEL")))
+                     (if n (1- (or (parse-integer n :junk-allowed t) 1)) 0)))
+      (objc:invoke view "presentScene:" scene))
+    (objc:invoke view "addGestureRecognizer:"
+                 (ui:keep (objc:invoke (objc:invoke "UITapGestureRecognizer" "alloc")
+                                       "initWithTarget:action:"
+                                       (ui:action-target #'tapped) "fire:")))
+    (setf *careless* (equal (ext:getenv "ANTS_AUTOPLAY") "careless"))
+    (when (ext:getenv "ANTS_AUTOPLAY")
+      (ui:after-every 0.5 (lambda (timer) (declare (ignore timer)) (autoplay-tick))))
+    (values)))

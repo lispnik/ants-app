@@ -1,0 +1,11 @@
+build/
+*.fasl
+*.fas
+*~
+.DS_Store
+
+# ocicl-vendored dependency sources.
+/ocicl/
+
+# Personal signing settings; see tools/testflight.sh.
+/local.env
