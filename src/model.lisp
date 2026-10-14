@@ -92,7 +92,7 @@ moment between one ant jumping and the next leaving does not count.")
                        "...TKTTKT..."
                        "...TTTTTT..."
                        "....TTTT...."))
-   (make-level :name "Heart" :difficulty 0.25 :slots 3 :seed 23
+   (make-level :name "Heart" :difficulty 0.25 :slots 3 :seed 30
                :rows '("BBBBBBBBBBBBB"
                        "BBRRRBBBRRRBB"
                        "BRRWRRBRRRRRB"
@@ -165,9 +165,12 @@ moment between one ant jumping and the next leaving does not count.")
 (defstruct (rng (:constructor make-rng (state))) state)
 
 (defun rng-next (rng limit)
-  "An integer in [0, LIMIT)."
+  "An integer in [0, LIMIT), from the generator's high bits.  The low bits of
+a power-of-two linear congruential generator repeat with short periods -- bit
+k with period 2^(k+1) -- so taking the state MOD LIMIT made shuffles visibly
+unfair; scaling by the whole state lets the good high bits decide."
   (setf (rng-state rng) (mod (+ (* (rng-state rng) 1103515245) 12345) 2147483648))
-  (mod (ash (rng-state rng) -8) limit))
+  (floor (* (rng-state rng) limit) 2147483648))
 
 (defun shuffle (vector rng)
   (loop for i from (1- (length vector)) downto 1

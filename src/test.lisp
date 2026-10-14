@@ -1,6 +1,6 @@
 ;;;; test.lisp -- play every level headless, on the host.
 ;;;;
-;;;;   sbcl --script test.lisp      (or ecl --shell test.lisp)
+;;;;   sbcl --script src/test.lisp      (or ecl --shell src/test.lisp)
 ;;;;
 ;;;; The model has no Objective-C in it, so it loads without objc; the
 ;;;; package's UI nickname wants a UIKIT package to exist, and an empty one

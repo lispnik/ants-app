@@ -51,14 +51,15 @@ tools/testflight.sh --validate   # build and validate, upload nothing
 
 | | |
 |---|---|
-| `model.lisp` | the rules, in plain Lisp: levels, dealing, reachability, ants |
-| `view.lisp` | the SpriteKit scene, taps, and an autoplay mode for development |
-| `test.lisp` | plays every level headless: `sbcl --script test.lisp` |
+| `src/package.lisp` | the package |
+| `src/model.lisp` | the rules, in plain Lisp: levels, dealing, reachability, ants |
+| `src/view.lisp` | the SpriteKit scene, taps, and an autoplay mode for development |
+| `src/test.lisp` | plays every level headless: `sbcl --script src/test.lisp` |
 | `tools/make-icon.py` | draws `res/Ants.xcassets` with the standard library |
 | `tools/testflight.sh` | App Store build, check, validate, upload |
 
 A level is a list of strings, one character per cube; add one to `*levels*` in
-`model.lisp`.
+`src/model.lisp`.
 
 ## Development switches
 

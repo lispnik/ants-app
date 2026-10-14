@@ -142,11 +142,16 @@ shrinking and fading as it goes, then out of the scene."
 
 (defun make-ant-node (ant)
   (let* ((char (box-colour (ant-box ant)))
-         (node (rect-sprite (rgb char 0.9) 6 8)))
+         (node (rect-sprite (rgb char 0.75) 5 7))     ; thorax
+         (butt (rect-sprite (rgb char 0.9) 7 9)))
     ;; Legs, under the body; a head in front of it.
     (add node (z (at (rect-sprite (ui:color 0.1 0.08 0.08) 12 1.5d0) 0 2) -1))
     (add node (z (at (rect-sprite (ui:color 0.1 0.08 0.08) 12 1.5d0) 0 -2) -1))
     (add node (at (rect-sprite (rgb char 0.55) 5 5) 0 6))
+    ;; The abdomen, hinged at the waist so that it can swing: see WIGGLE.
+    (objc:invoke butt "setAnchorPoint:" (point 0.5 1))
+    (objc:invoke butt "setName:" "butt")
+    (add node (at butt 0 -3))
     (z (at node (ant-x ant) (ant-y ant)) 20)
     (setf (ant-node ant) node)
     node))
@@ -230,9 +235,26 @@ tappable, the rows behind dimmed, the rest hidden and counted."
   (setf (ant-load ant)
         (add (ant-node ant) (at (make-cube (box-colour (ant-box ant)) 9) 0 11))))
 
+(defun butt (ant)
+  (objc:invoke (ant-node ant) "childNodeWithName:" "butt"))
+
+(defun wiggle (ant)
+  "Swing the ant's abdomen from side to side, about its waist, until STILL."
+  (let ((swing (action "rotateByAngle:duration:" 0.4d0 0.07d0))
+        (back (action "rotateByAngle:duration:" -0.8d0 0.14d0)))
+    (objc:invoke (butt ant) "runAction:withKey:"
+                 (action "repeatActionForever:" (action "sequence:" (vector swing back swing)))
+                 "wiggle")))
+
+(defun still (ant)
+  (let ((butt (butt ant)))
+    (objc:invoke butt "removeActionForKey:" "wiggle")
+    (objc:invoke butt "setZRotation:" 0d0)))
+
 (defun set-down (ant)
   "The ant stops to rest: the cube it carries goes on the ground in front of
-it, under the ants walking by, until REST-END picks it up again."
+it, under the ants walking by, and it shakes its abdomen until REST-END."
+  (wiggle ant)
   (when (ant-load ant)
     (objc:invoke (ant-load ant) "removeFromParent")
     (setf (ant-load ant) nil))
@@ -279,6 +301,7 @@ it, under the ants walking by, until REST-END picks it up again."
        (set-down (first arguments)))
       (:rest-end
        (let ((ant (first arguments)))
+         (still ant)
          (when (ant-dropped ant)
            (vanish (ant-dropped ant) 0.1d0)
            (setf (ant-dropped ant) nil))

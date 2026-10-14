@@ -16,6 +16,7 @@
   :bundle-short-version "1.0.0"
   :serial t
   :depends-on ("objc/uikit")
+  :pathname "src"
   :components ((:file "package")
                (:file "model")
                (:file "view"))
