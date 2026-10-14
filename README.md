@@ -15,7 +15,9 @@ win. Fill every slot with boxes whose cubes are all still buried and the round
 is lost.
 
 Every deal is checked winnable before it is played: a search over deployment
-orders confirms that some order clears the plate.
+orders confirms that some order clears the plate. Clearing a picture unlocks
+the next; the level counter at the top left opens a picker of the unlocked
+ones, and the app reopens where it was left.
 
 ## Building
 
@@ -70,4 +72,5 @@ SIMCTL_CHILD_ANTS_AUTOPLAY=1 xcrun simctl launch booted com.burnsidemk.ants
 ```
 
 `ANTS_AUTOPLAY=1` plays by itself, `ANTS_AUTOPLAY=careless` picks columns at
-random (and usually loses), `ANTS_LEVEL=n` starts at level n.
+random (and usually loses), `ANTS_LEVEL=n` starts at level n instead of the
+saved one, and `ANTS_PICKER=1` opens the level picker.

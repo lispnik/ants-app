@@ -22,6 +22,33 @@
 (defvar *more-labels* nil "Per queue column, the label counting boxes not drawn.")
 (defvar *last-time* nil)
 (defvar *shown-left* nil "The cube count the status line last showed.")
+(defvar *picker* nil "The level picker, while it is open.")
+
+;;; ------------------------------------------------------------------
+;;; progress, kept in NSUserDefaults across launches
+;;;
+;;; "unlocked" is how many levels may be played, from the first; clearing a
+;;; level unlocks the next.  "level" is the one being played, so the app
+;;; opens where it was left.
+
+(defun defaults ()
+  (objc:invoke "NSUserDefaults" "standardUserDefaults"))
+
+(defun saved (key)
+  (objc:invoke (defaults) "integerForKey:" key))
+
+(defun save (key value)
+  (objc:invoke (defaults) "setInteger:forKey:" value key))
+
+(defun unlocked ()
+  (max 1 (min (length *levels*) (saved "unlocked"))))
+
+(defun unlock (count)
+  (when (> count (unlocked))
+    (save "unlocked" (min count (length *levels*)))))
+
+(defun saved-level ()
+  (max 0 (min (saved "level") (1- (unlocked)))))
 
 ;;; ------------------------------------------------------------------
 ;;; nodes
@@ -184,6 +211,7 @@ tappable, the rows behind dimmed, the rest hidden and counted."
   (when *world* (objc:invoke *world* "removeFromParent"))
   (setf *world* (add *scene* (objc:invoke "SKNode" "node"))
         *overlay* nil
+        *picker* nil
         *shown-left* nil
         *last-time* nil)
   (let* ((size (game-cell-size game))
@@ -194,9 +222,11 @@ tappable, the rows behind dimmed, the rest hidden and counted."
          (plate-h (* (+ h 0.7d0) size)))
     ;; Title, and a restart button.
     (setf *status* (add *world* (at (text "" 18 (ui:color 1 1 1)) (/ *scene-width* 2) 776)))
-    (add *world* (at (text (format nil "~d/~d" (1+ *level-index*) (length *levels*)) 15
-                           (ui:color 1 1 1 0.6) :font "AvenirNext-DemiBold")
-                     28 776))
+    ;; The level counter, which opens the picker.
+    (add *world* (at (rounded 64 28 8 (ui:color 1 1 1 0.15)) 40 776))
+    (add *world* (at (text (format nil "~d/~d" (1+ *level-index*) (length *levels*)) 14
+                           (ui:color 1 1 1) :font "AvenirNext-DemiBold")
+                     40 776))
     (add *world* (at (rounded 70 28 8 (ui:color 1 1 1 0.15)) 345 776))
     (add *world* (at (text "Restart" 14 (ui:color 1 1 1) :font "AvenirNext-DemiBold") 345 776))
     ;; The plate and the picture on it.
@@ -318,6 +348,7 @@ it, under the ants walking by, and it shakes its abdomen until REST-END."
          (setf (box-node box) nil (box-label box) nil)))
       (:won
        (haptic 2)
+       (unlock (+ *level-index* 2))
        (show-overlay "Cleared!"
                      (if (< (1+ *level-index*) (length *levels*)) "Tap for the next picture" "Tap to play again")
                      (ui:color 0.55 0.95 0.55)))
@@ -348,7 +379,8 @@ The sway is drawn only: it never takes an ant off its route."
 
 (defun frame (dt)
   (let ((game *game*))
-    (when game
+    ;; The round holds still while the picker is open.
+    (when (and game (not *picker*))
       (step-game game dt)
       (dolist (event (take-events game))
         (handle game event))
@@ -382,6 +414,7 @@ The sway is drawn only: it never takes an ant off its route."
   (setf *level-index* (mod index (length *levels*))
         *game* (new-game (nth *level-index* *levels*))
         *failed* nil)
+  (save "level" *level-index*)
   (build-round *game*)
   (format t "ANTS: level ~a, ~d cubes, ~d boxes, seed ~a~%"
           (level-name (game-level *game*)) (game-cubes-left *game*)
@@ -394,6 +427,9 @@ The sway is drawn only: it never takes an ant off its route."
 (defun tap-at (x y)
   (let ((game *game*))
     (cond ((null game))
+          (*picker* (picker-tap x y))
+          ((within x y 40 776 36 20)
+           (show-picker))
           (*overlay*
            (start-level (if (eq (game-state game) :won) (1+ *level-index*) *level-index*)))
           ((within x y 345 776 40 20)
@@ -409,6 +445,63 @@ The sway is drawn only: it never takes an ant off its route."
                                       (haptic 0))
                                      (t (shake (box-node box))))
                                (return-from tap-at)))))))
+
+;;; ------------------------------------------------------------------
+;;; the level picker: every picture, the unlocked ones playable
+
+(defun picker-row-y (row)
+  (- 640 (* row 62)))
+
+(defun picker-top ()
+  (+ (picker-row-y 0) 75))
+
+(defun picker-bottom ()
+  (- (picker-row-y (1- (length *levels*))) 40))
+
+(defun show-picker ()
+  (let* ((open (unlocked))
+         (top (picker-top))
+         (bottom (picker-bottom))
+         (picker (z (objc:invoke "SKNode" "node") 200)))
+    ;; A shade over the round; a tap on it closes the picker.
+    (add picker (at (rect-sprite (ui:color 0 0 0 0.45) *scene-width* *scene-height*)
+                    (/ *scene-width* 2) (/ *scene-height* 2)))
+    (add picker (at (rounded 290 (- top bottom) 18 (ui:color 0.08 0.08 0.10 0.95) (ui:color 1 1 1 0.45) 2)
+                    (/ *scene-width* 2) (/ (+ top bottom) 2)))
+    (add picker (at (text "Pictures" 22 (ui:color 1 1 1)) (/ *scene-width* 2) (- top 34)))
+    (loop for level in *levels*
+          for row from 0
+          for playable = (< row open)
+          for current = (= row *level-index*)
+          do (let ((button (rounded 240 50 12
+                                    (ui:color 1 1 1 (if playable 0.14 0.04))
+                                    (if current (ui:color 0.55 0.95 0.55) (ui:color 1 1 1 (if playable 0.3 0.1)))
+                                    (if current 3 1.5d0))))
+               (objc:invoke button "setName:" (format nil "row~d" row))
+               (add button (text (format nil "~d   ~a" (1+ row) (if playable (level-name level) "Locked"))
+                                 18 (ui:color 1 1 1 (if playable 1 0.35)) :font "AvenirNext-DemiBold"))
+               (add picker (at button (/ *scene-width* 2) (picker-row-y row)))))
+    (setf *picker* (add *world* picker))))
+
+(defun close-picker ()
+  (when *picker*
+    (objc:invoke *picker* "removeFromParent")
+    (setf *picker* nil)))
+
+(defun picker-tap (x y)
+  "A tap on an unlocked picture plays it; on a locked one, shakes it; outside
+the panel, closes the picker."
+  (let ((row (loop for row below (length *levels*)
+                   when (within x y (/ *scene-width* 2) (picker-row-y row) 120 25)
+                     return row)))
+    (cond ((and row (< row (unlocked)))
+           (haptic 0)
+           (start-level row))
+          (row
+           (shake (objc:invoke *picker* "childNodeWithName:" (format nil "row~d" row))))
+          ((not (within x y (/ *scene-width* 2) (/ (+ (picker-top) (picker-bottom)) 2)
+                        145 (/ (- (picker-top) (picker-bottom)) 2)))
+           (close-picker)))))
 
 (defun tap-view-point (in-view)
   "A tap at IN-VIEW, a point in the SKView's coordinates (y down)."
@@ -426,7 +519,8 @@ The sway is drawn only: it never takes an ant off its route."
 ;;; Every half second it taps, through TAP-AT, the front box of a column
 ;;; whose colour has a cube within reach, or any box once the board is idle;
 ;;; and the overlay when a round ends.  ANTS_AUTOPLAY=careless taps a
-;;; column at random, which usually loses; ANTS_LEVEL=n starts at level n, from 1.
+;;; column at random, which usually loses; ANTS_LEVEL=n starts at level n,
+;;; from 1, instead of the saved one; ANTS_PICKER=1 opens the level picker.
 
 (defun autotap (x y)
   "Tap the scene point (X Y) as a finger would: by way of the view."
@@ -437,7 +531,7 @@ The sway is drawn only: it never takes an ant off its route."
 
 (defun autoplay-tick ()
   (let ((game *game*))
-    (cond ((null game))
+    (cond ((or (null game) *picker*))
           (*overlay*
            ;; Leave the result up long enough to be read.
            (when (>= (incf *overlay-ticks*) 5)
@@ -476,7 +570,9 @@ The sway is drawn only: it never takes an ant off its route."
       (setf *view* (ui:keep view)
             *scene* (ui:keep scene))
       (start-level (let ((n (ext:getenv "ANTS_LEVEL")))
-                     (if n (1- (or (parse-integer n :junk-allowed t) 1)) 0)))
+                     (if n (1- (or (parse-integer n :junk-allowed t) 1)) (saved-level))))
+      (when (ext:getenv "ANTS_PICKER")
+        (show-picker))
       (objc:invoke view "presentScene:" scene))
     (objc:invoke view "addGestureRecognizer:"
                  (ui:keep (objc:invoke (objc:invoke "UITapGestureRecognizer" "alloc")
