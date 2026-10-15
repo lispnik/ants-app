@@ -92,6 +92,20 @@ moment between one ant jumping and the next leaving does not count.")
                        "...TKTTKT..."
                        "...TTTTTT..."
                        "....TTTT...."))
+   (make-level :name "Strawberry" :difficulty 0.6 :slots 4 :seed 1
+               :rows '("CCCCCGGGCCCCC"
+                       "CCCGGGGGGGCCC"
+                       "CCRRRGGGRRRCC"
+                       "CRRRRRRRRRRRC"
+                       "CRRYRRRYRRRRC"
+                       "CRRRRRRRRYRRC"
+                       "CRRRYRRRRRRRC"
+                       "CCRRRRRYRRRCC"
+                       "CCRRYRRRRRRCC"
+                       "CCCRRRRRYRCCC"
+                       "CCCCRRRRRCCCC"
+                       "CCCCCRRRCCCCC"
+                       "CCCCCCRCCCCCC"))
    (make-level :name "Heart" :difficulty 0.25 :slots 3 :seed 30
                :rows '("BBBBBBBBBBBBB"
                        "BBRRRBBBRRRBB"
@@ -105,6 +119,20 @@ moment between one ant jumping and the next leaving does not count.")
                        "BBBBBRRRBBBBB"
                        "BBBBBBRBBBBBB"
                        "BBBBBBBBBBBBB"))
+   (make-level :name "Rocket" :difficulty 0.8 :slots 4 :seed 1
+               :rows '("BBBBBBRBBBBBB"
+                       "BBBBBRRRBBBBB"
+                       "BBBBBWWWBBBYB"
+                       "BBBBWWWWWBBBB"
+                       "BYBBWWCWWBBBB"
+                       "BBBBWCCCWBBBB"
+                       "BBBBWWCWWBBYB"
+                       "BBBBWWWWWBBBB"
+                       "BBBRWWWWWRBBB"
+                       "BBRRWWWWWRRBB"
+                       "BBRRBOYOBRRBB"
+                       "BBBBBOYOBBBBB"
+                       "BYBBBBOBBBBBB"))
    (make-level :name "Flower" :difficulty 0.5 :slots 4 :seed 5
                :rows '("CCCCCCCCCCCCCC"
                        "CCCCCPPPPCCCCC"
@@ -133,7 +161,35 @@ moment between one ant jumping and the next leaving does not count.")
                        "BBBBBBYYYBBBBB"
                        "GBBBBBBBBBBBBG"
                        "GGBBBGBBBBGBGG"
-                       "NGGNNGGNNNGGGN"))))
+                       "NGGNNGGNNNGGGN"))
+   (make-level :name "Cat" :difficulty 0.7 :slots 4 :seed 1
+               :rows '("PPPPPPPPPPPPPP"
+                       "POPPPPPPPPPPOP"
+                       "POOPPPPPPPPOOP"
+                       "POOOOOOOOOOOOP"
+                       "POOOOOOOOOOOOP"
+                       "POOGKOOOOGKOOP"
+                       "POOGKOOOOGKOOP"
+                       "POOOOOOOOOOOOP"
+                       "PWWOOOPPOOOWWP"
+                       "POOOOOWWOOOOOP"
+                       "PPOOOWOOWOOOPP"
+                       "PPPOOOOOOOOPPP"
+                       "PPPPPPPPPPPPPP"))
+   (make-level :name "House" :difficulty 0.9 :slots 4 :seed 1
+               :rows '("CCCCCCCCCCNNCC"
+                       "CCCCCCRRCCNNCC"
+                       "CCCCCRRRRCNNCC"
+                       "CCCCRRRRRRRCCC"
+                       "CCCRRRRRRRRRCC"
+                       "CCRRRRRRRRRRRC"
+                       "CCCWWWWWWWWWCC"
+                       "CCCWYYWWWYYWCC"
+                       "CCCWYYWWWYYWCC"
+                       "CCCWWWNNWWWWCC"
+                       "CCCWWWNNWWWWCC"
+                       "CCCWWWNNWWWWCC"
+                       "GGGGGGGGGGGGGG"))))
 
 (defun parse-picture (rows)
   "A 2D array (rows columns) of colour characters, NIL where there is no cube."
