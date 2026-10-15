@@ -40,7 +40,9 @@ half, so a straight line between two neighbouring cells stays in them.")
 (defparameter *spawn-interval* 0.2d0 "Seconds between ants leaving one box.")
 (defparameter *max-out* 4 "Ants of one box abroad at once.")
 (defparameter *rest-chance* 20 "Percent of ants that rest once on the way home.")
-(defparameter *rest-seconds* '(2d0 . 4d0) "Shortest and longest rest.")
+(defparameter *rest-seconds* '(0.3d0 0.6d0 2.5d0)
+  "Shortest rest, the mean of what is added to it, and longest.  The addition
+is exponentially distributed: most rests are a moment, a few are long.")
 (defparameter *stuck-delay* 0.8d0
   "Seconds the board must be stuck before the round is lost, so that the
 moment between one ant jumping and the next leaving does not count.")
@@ -189,7 +191,122 @@ moment between one ant jumping and the next leaving does not count.")
                        "CCCWWWNNWWWWCC"
                        "CCCWWWNNWWWWCC"
                        "CCCWWWNNWWWWCC"
-                       "GGGGGGGGGGGGGG"))))
+                       "GGGGGGGGGGGGGG"))
+   (make-level :name "Butterfly" :difficulty 0.3 :slots 4 :seed 48
+               :rows '("CCCCCCCCCCCCCCCCCCCCCC"
+                       "CCCCCCCCKCCCCKCCCCCCCC"
+                       "CCCPPPPPCKCCKCPPPPPCCC"
+                       "CCPPPPPPPCKKCPPPPPPPCC"
+                       "CPPPRRRPPPKKPPPRRRPPPC"
+                       "CPPRRYRRPPKKPPRRYRRPPC"
+                       "CPPRRRRYPPKKPPYRRRRPPC"
+                       "CPPYRRRRPPKKPPRRRRYPPC"
+                       "CPPRRRRRPPKKPPRRRRRPPC"
+                       "CPPPRRRPPPKKPPPRRRPPPC"
+                       "CCPPPPPPPCKKCPPPPPPPCC"
+                       "CCCPPPPPCCKKCCPPPPPCCC"
+                       "CCCCPPPPPCKKCPPPPPCCCC"
+                       "CCCPPOOOPPKKPPOOOPPCCC"
+                       "CCCPOOOOOPKKPOOOOOPCCC"
+                       "CCCPOOYOOPKKPOOYOOPCCC"
+                       "CCCPOOOOOPKKPOOOOOPCCC"
+                       "CCCPPOOOPPKKPPOOOPPCCC"
+                       "CCCCPPPPPCKKCPPPPPCCCC"
+                       "CCCCCCCCCCKKCCCCCCCCCC"
+                       "CCCCCCCCCCCCCCCCCCCCCC"
+                       "CCCCCCCCCCCCCCCCCCCCCC"))
+   (make-level :name "Planet" :difficulty 0.3 :slots 4 :seed 20
+               :rows '("KKKKKKKKKKKKKKKKKKKKKK"
+                       "KKWKKKKKKKKKKWKKKKKKKK"
+                       "KKKKKKKKKKKKKKKKKKWKKK"
+                       "KKKKKKKKKKKKKKKKKKKKKK"
+                       "KKKKKKKKOOOOOOKKKKKKKK"
+                       "KWKKKKYYYYYYYYYYKKKKKK"
+                       "KKKKKYYYYYYYYYYYYKKKKK"
+                       "KKKKKNNNNNNNNNNNNKKKKK"
+                       "KKKKNNNNNNNNNNNNNNKKKK"
+                       "KKTTOOOOOOOOOOOOOOTTKK"
+                       "KTTKOOOOOOOOOOOOOOKTTK"
+                       "TTTKYYYYYYYYYYYYYYKTTT"
+                       "KTTKYYYYYYYYYYYYYYKTTW"
+                       "KKTTTNNNNNNNNNNNNTTTKK"
+                       "KKKKKNTTTTTTTTTTNKKKKK"
+                       "KKWKKOOOOOOOOOOOOKKKKK"
+                       "KKKKKKOOOOOOOOOOKKKKKK"
+                       "KKKKKKKKYYYYYYKKKKKKKK"
+                       "KKKKKKKKKKKKKKKKKKKKWK"
+                       "KKKKKKKKKKKKKKKWKKKKKK"
+                       "KKKKWKKKKKKKKKKKKKKKKK"
+                       "KKKKKKKKKKKKKKKKKKKKKK"))
+   (make-level :name "Rainbow" :difficulty 0.9 :slots 3 :seed 1
+               :rows '("CCCCCCCCCCCCCCCCCCCCCC"
+                       "CCWWCCCCCCCCCCCCCCWWCC"
+                       "CWWWWCCCCCCCCCCCCWWWWC"
+                       "CWWWWWCCCCCCCCCCWWWWWC"
+                       "CCCCCCCCCCCCCCCCCCCCCC"
+                       "CCCCCCCCCCCCCCCCCCCCCC"
+                       "CCCCCCCPPPPPPPPCCCCCCC"
+                       "CCCCPPPPPPPPPPPPPPCCCC"
+                       "CCPPPPBBBBBBBBBBPPPPCC"
+                       "CPPPBBBBGGGGGGBBBBPPPC"
+                       "PPBBBGGGGGGGGGGGGBBBPP"
+                       "PBBBGGGYYYYYYYYGGGBBBP"
+                       "BBGGGYYYYOOOOYYYYGGGBB"
+                       "BBGGYYOOOOOOOOOOYYGGBB"
+                       "BGGYYOOORRRRRROOOYYGGB"
+                       "GGYYOORRRRRRRRRROOYYGG"
+                       "GYYOORRRRRRRRRRRROOYYG"
+                       "GYYOORRRRCCCCRRRROOYYG"
+                       "GYOORRRRCCCCCCRRRROOYG"
+                       "YYOORRRCCCCCCCCRRROOYY"
+                       "GGGGGGGGGGGGGGGGGGGGGG"
+                       "NNNNNNNNNNNNNNNNNNNNNN"))
+   (make-level :name "Target" :difficulty 0.8 :slots 4 :seed 46
+               :rows '("CCCCCCCBBBBBBBBCCCCCCC"
+                       "CCCCCBBWWWWWWWWBBCCCCC"
+                       "CCCCBWWWRRRRRRWWWBCCCC"
+                       "CCCBWWRRRRRRRRRRWWBCCC"
+                       "CCBWWRRGGGGGGGGRRWWBCC"
+                       "CBWWRRGGGYYYYGGGRRWWBC"
+                       "CBWRRGGYYYYYYYYGGRRWBC"
+                       "BWWRGGYYBBBBBBYYGGRWWB"
+                       "BWRRGGYBBWWWWBBYGGRRWB"
+                       "BWRRGYYBWWKKWWBYYGRRWB"
+                       "BWRRGYYBWKKKKWBYYGRRWB"
+                       "BWRRGYYBWKKKKWBYYGRRWB"
+                       "BWRRGYYBWWKKWWBYYGRRWB"
+                       "BWRRGGYBBWWWWBBYGGRRWB"
+                       "BWWRGGYYBBBBBBYYGGRWWB"
+                       "CBWRRGGYYYYYYYYGGRRWBC"
+                       "CBWWRRGGGYYYYGGGRRWWBC"
+                       "CCBWWRRGGGGGGGGRRWWBCC"
+                       "CCCBWWRRRRRRRRRRWWBCCC"
+                       "CCCCBWWWRRRRRRWWWBCCCC"
+                       "CCCCCBBWWWWWWWWBBCCCCC"
+                       "CCCCCCCBBBBBBBBCCCCCCC"))
+   (make-level :name "Spiral" :difficulty 0.6 :slots 4 :seed 23
+               :rows '("RRRRRRRRRRRRRRRRRRRRRR"
+                       "KKKKKKKKKKKKKKKKKKKKKO"
+                       "GBBBBBBBBBBBBBBBBBBBKO"
+                       "GKWWWWWWWWWWWWWWWWWPKO"
+                       "GKOYYYYYYYYYYYYYYYWPKO"
+                       "GKOWNNNNNNNNNNNNNGWPKO"
+                       "GKOWPRRRRRRRRRRRNGWPKO"
+                       "GKOWPNTTTTTTTTTONGWPKO"
+                       "GKOWPNGBBBBBBBTONGWPKO"
+                       "GKOWPNGTCCCCCPTONGWPKO"
+                       "GKOWPNGTOYYYCPTONGWPKO"
+                       "GKOWPNGTOCKGCPTONGWPKO"
+                       "GKOWPNGTOCCCCPTONGWPKO"
+                       "GKOWPNGTRRRRRPTONGWPKO"
+                       "GKOWPNGTTTTTTTTONGWPKO"
+                       "GKOWPNYYYYYYYYYONGWPKO"
+                       "GKOWPNNNNNNNNNNNNGWPKO"
+                       "GKOWBBBBBBBBBBBBBGWPKO"
+                       "GKOWWWWWWWWWWWWWWWWPKO"
+                       "GKRRRRRRRRRRRRRRRRRPKO"
+                       "GKKKKKKKKKKKKKKKKKKKKO"
+                       "YYYYYYYYYYYYYYYYYYYYYO"))))
 
 (defun parse-picture (rows)
   "A 2D array (rows columns) of colour characters, NIL where there is no cube."
@@ -329,44 +446,69 @@ connected, so the default start reaches whatever any start can."
 ;;; arrive -- but it is close enough to keep the dealer from handing out a
 ;;; queue nobody could win.
 
+(defun cell-size (h w)
+  "The side of a cube, in points, for a picture H by W."
+  (min 26d0 (/ 370d0 (+ w 2)) (/ *plate-room* h)))
+
+(defun slot-entry-column (slot slots w size)
+  "ENTRY-COLUMN without a game: for SLOT of SLOTS, under a picture W wide of
+cubes SIZE."
+  (let ((x (* (- slot (/ (1- slots) 2)) *slot-step*)) ; from the middle
+        (left (- (/ (* w size) 2))))
+    (max 0 (min (1- w) (round (- (/ (- x left) size) 0.5d0))))))
+
 (defun settle (grid deployed)
-  "Let the DEPLOYED boxes, a list of (colour . remaining), take what they can
-from GRID, which is changed.  The boxes still not empty."
-  (loop for progress = nil
+  "Let the DEPLOYED boxes, each a list (colour remaining entry-column slot),
+take what they can from GRID, which is changed.  The boxes still not empty.
+A box short of ants for every cube it can reach takes the nearest, as its
+ants do: measured from where they step onto the plate, below its slot."
+  (loop with h = (array-dimension grid 0)
+        for progress = nil
         do (dolist (box deployed)
-             (loop while (plusp (rest box))
-                   for cubes = (reachable-cubes grid (first box))
+             (loop while (plusp (second box))
+                   for cubes = (reachable-cubes grid (first box) nil h (third box))
                    while cubes
                    do (loop for (nil r c) in cubes
-                            while (plusp (rest box))
+                            while (plusp (second box))
                             do (setf (aref grid r c) nil)
-                               (decf (rest box))
+                               (decf (second box))
                                (setf progress t))))
         while progress)
-  (remove-if #'zerop deployed :key #'rest))
+  (remove-if #'zerop deployed :key #'second))
 
 (defun solvable-p (grid columns slots)
   "Whether some order of deployment from COLUMNS, each a list of
-(colour . count), clears GRID with SLOTS slots."
-  (let ((seen (make-hash-table :test 'equal))
-        (columns (coerce columns 'vector)))
+(colour . count), clears GRID with SLOTS slots; and if so, the second value,
+the columns in that order."
+  (let* ((seen (make-hash-table :test 'equal))
+         (columns (coerce columns 'vector))
+         (h (array-dimension grid 0))
+         (w (array-dimension grid 1))
+         (size (cell-size h w)))
     (labels ((search-from (grid pointers deployed)
-               (cond ((zerop (cube-count grid)) t)
+               (cond ((zerop (cube-count grid)) (values t '()))
                      ((gethash pointers seen) nil)
                      (t
                       (setf (gethash pointers seen) t)
-                      (and (< (length deployed) slots)
-                           (loop for k from 0
-                                 for p in pointers
-                                 for column = (aref columns k)
-                                 thereis (when (< p (length column))
-                                           (let* ((grid (copy-grid grid))
-                                                  (box (nth p column))
-                                                  (deployed (settle grid (cons (cons (first box) (rest box))
-                                                                               (copy-alist deployed))))
-                                                  (pointers (copy-list pointers)))
-                                             (incf (nth k pointers))
-                                             (search-from grid pointers deployed)))))))))
+                      (let ((slot (loop for slot below slots
+                                        unless (find slot deployed :key #'fourth)
+                                          return slot)))
+                        (when slot
+                          (loop for k from 0
+                                for p in pointers
+                                for column = (aref columns k)
+                                when (< p (length column))
+                                  do (let* ((grid (copy-grid grid))
+                                            (box (nth p column))
+                                            (deployed (settle grid (cons (list (first box) (rest box)
+                                                                               (slot-entry-column slot slots w size)
+                                                                               slot)
+                                                                         (mapcar #'copy-list deployed))))
+                                            (pointers (copy-list pointers)))
+                                       (incf (nth k pointers))
+                                       (multiple-value-bind (won order) (search-from grid pointers deployed)
+                                         (when won
+                                           (return (values t (cons k order)))))))))))))
       (search-from (copy-grid grid) (make-list (length columns) :initial-element 0) '()))))
 
 ;;; ------------------------------------------------------------------
@@ -526,14 +668,13 @@ height and the ant's, so that it reaches the edge without walking onto it.")
 
 (defun entry-column (game slot)
   "The column of the plate's bottom margin nearest SLOT, where its ants step on."
-  (max 0 (min (1- (game-w game))
-              (round (- (/ (- (slot-x game slot) (game-left game)) (game-cell-size game)) 0.5d0)))))
+  (slot-entry-column slot (length (game-slots game)) (game-w game) (game-cell-size game)))
 
 (defun new-game (level)
   (let* ((grid (parse-picture (level-rows level)))
          (h (array-dimension grid 0))
          (w (array-dimension grid 1))
-         (size (min 26d0 (/ 370d0 (+ w 2)) (/ *plate-room* h))))
+         (size (cell-size h w)))
     (multiple-value-bind (columns seed) (deal-winnable grid level)
       (make-game :level level
                  :grid grid
@@ -643,6 +784,11 @@ of the margin.  The jump in from the edge is the view's to draw."
         sum (prog1 (sqrt (+ (expt (- px x) 2) (expt (- py y) 2)))
               (setf x px y py))))
 
+(defun rest-seconds (rng)
+  "How long an ant rests, by *REST-SECONDS*."
+  (destructuring-bind (shortest mean longest) *rest-seconds*
+    (min longest (- shortest (* mean (log (- 1d0 (random-between rng 0d0 0.999d0))))))))
+
 (defun plan-rest (game ant)
   "Decide, as the ant turns for home, whether and where along the way it
 stops to rest."
@@ -666,7 +812,7 @@ has come far enough, unless only the last step to the hole is left."
               (>= (ant-walked ant) (ant-rest-at ant)))
          (setf (ant-rest-at ant) nil)
          (when (rest (ant-path ant))
-           (setf (ant-rest ant) (random-between (game-rng game) (car *rest-seconds*) (cdr *rest-seconds*)))
+           (setf (ant-rest ant) (rest-seconds (game-rng game)))
            (emit game :rest-start ant)))))
 
 (defun advance (ant distance)

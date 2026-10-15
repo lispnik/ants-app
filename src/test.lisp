@@ -28,39 +28,14 @@
   (let ((open (loop for column across (game-columns game) for k from 0 when column collect k)))
     (when open (nth (rng-next rng (length open)) open))))
 
-(defun winning-order (grid columns slots)
-  "The columns, in deployment order, of a way to clear GRID; SOLVABLE-P's
-search, remembering its moves."
-  (let ((seen (make-hash-table :test 'equal))
-        (columns (coerce columns 'vector)))
-    (labels ((search-from (grid pointers deployed)
-               (cond ((zerop (cube-count grid)) (values t '()))
-                     ((gethash pointers seen) nil)
-                     (t
-                      (setf (gethash pointers seen) t)
-                      (when (< (length deployed) slots)
-                        (loop for k from 0
-                              for p in pointers
-                              for column = (aref columns k)
-                              when (< p (length column))
-                                do (let* ((grid (copy-grid grid))
-                                          (box (nth p column))
-                                          (deployed (settle grid (cons (cons (first box) (rest box))
-                                                                       (copy-alist deployed))))
-                                          (pointers (copy-list pointers)))
-                                     (incf (nth k pointers))
-                                     (multiple-value-bind (won moves) (search-from grid pointers deployed)
-                                       (when won (return (values t (cons k moves))))))))))))
-      (nth-value 1 (search-from (copy-grid grid) (make-list (length columns) :initial-element 0) '())))))
-
 (defun play (level &key (careful t) solved (dt (/ 1d0 30)) (rng (make-rng 1)))
   (let* ((game (new-game level))
          (order (when solved
-                  (winning-order (game-grid game)
+                  (nth-value 1 (solvable-p (game-grid game)
                                  (loop for column across (game-columns game)
                                        collect (loop for box in column
                                                      collect (cons (box-colour box) (box-count box))))
-                                 (level-slots level))))
+                                 (level-slots level)))))
          (time 0d0))
     (loop while (and (eq (game-state game) :playing) (< time 3600))
           do (when (free-slot game)
@@ -76,6 +51,8 @@ search, remembering its moves."
              (incf time dt))
     (values (game-state game) time (game-cubes-left game) (game-seed game))))
 
+(defvar *failures* '())
+
 (dolist (level *levels*)
   (let ((start (get-internal-real-time)))
     (new-game level)
@@ -84,6 +61,7 @@ search, remembering its moves."
   (let ((boxes (loop for column in (deal (parse-picture (level-rows level)) (level-columns level) 1)
                      sum (length column))))
     (multiple-value-bind (state time left seed) (play level :solved t)
+      (unless (and seed (eq state :won)) (push (level-name level) *failures*))
       (format t "~10a ~3d cubes ~2d boxes seed ~a~%   solver's order: ~a after ~,1fs, ~d left~%"
               (level-name level) (cube-count (parse-picture (level-rows level))) boxes seed
               state time left))
@@ -92,3 +70,9 @@ search, remembering its moves."
     (format t "  random player won ~d of 10~%"
             (loop for trial below 10
                   count (eq :won (play level :careful nil :rng (make-rng (+ 1000 trial))))))))
+
+;;; Every deal must be one the solver vouched for, and its order must win.
+(cond (*failures*
+       (format t "~&FAILED: ~{~a~^, ~}~%" (reverse *failures*))
+       #+sbcl (sb-ext:exit :code 1) #+ecl (ext:quit 1) #-(or sbcl ecl) (error "failed"))
+      (t (format t "~&All ~d levels won in the solver's order.~%" (length *levels*))))

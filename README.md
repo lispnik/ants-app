@@ -15,7 +15,10 @@ win. Fill every slot with boxes whose cubes are all still buried and the round
 is lost.
 
 Every deal is checked winnable before it is played: a search over deployment
-orders confirms that some order clears the plate. Clearing a picture unlocks
+orders confirms that some order clears the plate. The search follows each
+box to its slot and lets its ants take the cubes nearest where they come in,
+as they do in play; `src/test.lisp` then replays the order it found in the
+real game and fails unless every level is won. Clearing a picture unlocks
 the next; the level counter at the top left opens a picker of the unlocked
 ones, and the app reopens where it was left.
 
@@ -56,7 +59,7 @@ tools/testflight.sh --validate   # build and validate, upload nothing
 | `src/package.lisp` | the package |
 | `src/model.lisp` | the rules, in plain Lisp: levels, dealing, reachability, ants |
 | `src/view.lisp` | the SpriteKit scene, taps, and an autoplay mode for development |
-| `src/test.lisp` | plays every level headless: `sbcl --script src/test.lisp` |
+| `src/test.lisp` | plays every level headless, and fails if one can't be won: `sbcl --script src/test.lisp` |
 | `tools/make-icon.py` | draws `res/Ants.xcassets` with the standard library |
 | `tools/testflight.sh` | App Store build, check, validate, upload |
 

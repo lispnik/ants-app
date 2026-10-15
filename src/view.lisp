@@ -449,14 +449,21 @@ The sway is drawn only: it never takes an ant off its route."
 ;;; ------------------------------------------------------------------
 ;;; the level picker: every picture, the unlocked ones playable
 
-(defun picker-row-y (row)
-  (- 640 (* row 62)))
+(defun picker-rows ()
+  "Pictures down each of the picker's two columns."
+  (ceiling (length *levels*) 2))
+
+(defun picker-row-y (index)
+  (- 640 (* (mod index (picker-rows)) 62)))
+
+(defun picker-x (index)
+  (+ (/ *scene-width* 2) (if (< index (picker-rows)) -84 84)))
 
 (defun picker-top ()
   (+ (picker-row-y 0) 75))
 
 (defun picker-bottom ()
-  (- (picker-row-y (1- (length *levels*))) 40))
+  (- (picker-row-y (1- (picker-rows))) 40))
 
 (defun show-picker ()
   (let* ((open (unlocked))
@@ -466,21 +473,21 @@ The sway is drawn only: it never takes an ant off its route."
     ;; A shade over the round; a tap on it closes the picker.
     (add picker (at (rect-sprite (ui:color 0 0 0 0.45) *scene-width* *scene-height*)
                     (/ *scene-width* 2) (/ *scene-height* 2)))
-    (add picker (at (rounded 290 (- top bottom) 18 (ui:color 0.08 0.08 0.10 0.95) (ui:color 1 1 1 0.45) 2)
+    (add picker (at (rounded 360 (- top bottom) 18 (ui:color 0.08 0.08 0.10 0.95) (ui:color 1 1 1 0.45) 2)
                     (/ *scene-width* 2) (/ (+ top bottom) 2)))
     (add picker (at (text "Pictures" 22 (ui:color 1 1 1)) (/ *scene-width* 2) (- top 34)))
     (loop for level in *levels*
           for row from 0
           for playable = (< row open)
           for current = (= row *level-index*)
-          do (let ((button (rounded 240 50 12
+          do (let ((button (rounded 156 50 12
                                     (ui:color 1 1 1 (if playable 0.14 0.04))
                                     (if current (ui:color 0.55 0.95 0.55) (ui:color 1 1 1 (if playable 0.3 0.1)))
                                     (if current 3 1.5d0))))
                (objc:invoke button "setName:" (format nil "row~d" row))
                (add button (text (format nil "~d   ~a" (1+ row) (if playable (level-name level) "Locked"))
-                                 18 (ui:color 1 1 1 (if playable 1 0.35)) :font "AvenirNext-DemiBold"))
-               (add picker (at button (/ *scene-width* 2) (picker-row-y row)))))
+                                 16 (ui:color 1 1 1 (if playable 1 0.35)) :font "AvenirNext-DemiBold"))
+               (add picker (at button (picker-x row) (picker-row-y row)))))
     (setf *picker* (add *world* picker))))
 
 (defun close-picker ()
@@ -492,7 +499,7 @@ The sway is drawn only: it never takes an ant off its route."
   "A tap on an unlocked picture plays it; on a locked one, shakes it; outside
 the panel, closes the picker."
   (let ((row (loop for row below (length *levels*)
-                   when (within x y (/ *scene-width* 2) (picker-row-y row) 120 25)
+                   when (within x y (picker-x row) (picker-row-y row) 78 25)
                      return row)))
     (cond ((and row (< row (unlocked)))
            (haptic 0)
@@ -500,7 +507,7 @@ the panel, closes the picker."
           (row
            (shake (objc:invoke *picker* "childNodeWithName:" (format nil "row~d" row))))
           ((not (within x y (/ *scene-width* 2) (/ (+ (picker-top) (picker-bottom)) 2)
-                        145 (/ (- (picker-top) (picker-bottom)) 2)))
+                        180 (/ (- (picker-top) (picker-bottom)) 2)))
            (close-picker)))))
 
 (defun tap-view-point (in-view)
