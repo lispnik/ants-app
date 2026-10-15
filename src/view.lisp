@@ -23,6 +23,8 @@
 (defvar *last-time* nil)
 (defvar *shown-left* nil "The cube count the status line last showed.")
 (defvar *picker* nil "The level picker, while it is open.")
+(defvar *fast* nil "Whether the ants go at double speed; the 2x button toggles it.")
+(defvar *fast-button* nil)
 
 ;;; ------------------------------------------------------------------
 ;;; progress, kept in NSUserDefaults across launches
@@ -220,15 +222,16 @@ tappable, the rows behind dimmed, the rest hidden and counted."
          (grid (game-grid game))
          (plate-w (* (+ w 0.7d0) size))
          (plate-h (* (+ h 0.7d0) size)))
-    ;; Title, and a restart button.
+    ;; Title, and the 2x button.
     (setf *status* (add *world* (at (text "" 18 (ui:color 1 1 1)) (/ *scene-width* 2) 776)))
     ;; The level counter, which opens the picker.
     (add *world* (at (rounded 64 28 8 (ui:color 1 1 1 0.15)) 40 776))
     (add *world* (at (text (format nil "~d/~d" (1+ *level-index*) (length *levels*)) 14
                            (ui:color 1 1 1) :font "AvenirNext-DemiBold")
                      40 776))
-    (add *world* (at (rounded 70 28 8 (ui:color 1 1 1 0.15)) 345 776))
-    (add *world* (at (text "Restart" 14 (ui:color 1 1 1) :font "AvenirNext-DemiBold") 345 776))
+    (setf *fast-button* (add *world* (at (rounded 56 28 8 (ui:color 1 1 1 0.15)) 351 776)))
+    (add *fast-button* (text "2×" 15 (ui:color 1 1 1) :font "AvenirNext-DemiBold"))
+    (show-speed)
     ;; The plate and the picture on it.
     (add *world* (at (rounded plate-w plate-h 8 (ui:color 0.80 0.78 0.74) (ui:color 0.55 0.53 0.50) 2)
                      (/ *scene-width* 2) (- *plate-top* (/ (* h size) 2))))
@@ -377,11 +380,27 @@ The sway is drawn only: it never takes an ant off its route."
           (objc:invoke node "setZRotation:"
                        (+ (- heading (/ pi 2)) (* *wobble* (cos step)))))))))
 
+(defun pace ()
+  (if *fast* 2 1))
+
+(defun show-speed ()
+  "Light the 2x button when it is on, and run the round's animations -- jumps,
+rests, pickups -- at the same pace as the model."
+  (objc:invoke *fast-button* "setFillColor:"
+               (if *fast* (ui:color 0.95 0.75 0.20 0.9) (ui:color 1 1 1 0.15)))
+  (objc:invoke *world* "setSpeed:" (float (pace) 1d0)))
+
+(defun toggle-speed ()
+  (setf *fast* (not *fast*))
+  (save "fast" (if *fast* 1 0))
+  (haptic 0)
+  (show-speed))
+
 (defun frame (dt)
   (let ((game *game*))
     ;; The round holds still while the picker is open.
     (when (and game (not *picker*))
-      (step-game game dt)
+      (step-game game (* dt (pace)))
       (dolist (event (take-events game))
         (handle game event))
       (draw-ants game)
@@ -432,8 +451,8 @@ The sway is drawn only: it never takes an ant off its route."
            (show-picker))
           (*overlay*
            (start-level (if (eq (game-state game) :won) (1+ *level-index*) *level-index*)))
-          ((within x y 345 776 40 20)
-           (start-level *level-index*))
+          ((within x y 351 776 32 20)
+           (toggle-speed))
           (t
            (loop for column across (game-columns game)
                  for k from 0
@@ -527,7 +546,8 @@ the panel, closes the picker."
 ;;; whose colour has a cube within reach, or any box once the board is idle;
 ;;; and the overlay when a round ends.  ANTS_AUTOPLAY=careless taps a
 ;;; column at random, which usually loses; ANTS_LEVEL=n starts at level n,
-;;; from 1, instead of the saved one; ANTS_PICKER=1 opens the level picker.
+;;; from 1, instead of the saved one; ANTS_PICKER=1 opens the level picker;
+;;; ANTS_FAST=1 starts at double speed.
 
 (defun autotap (x y)
   "Tap the scene point (X Y) as a finger would: by way of the view."
@@ -576,6 +596,7 @@ the panel, closes the picker."
       (objc:invoke scene "setScaleMode:" 1)        ; aspect fit
       (setf *view* (ui:keep view)
             *scene* (ui:keep scene))
+      (setf *fast* (or (= 1 (saved "fast")) (and (ext:getenv "ANTS_FAST") t)))
       (start-level (let ((n (ext:getenv "ANTS_LEVEL")))
                      (if n (1- (or (parse-integer n :junk-allowed t) 1)) (saved-level))))
       (when (ext:getenv "ANTS_PICKER")

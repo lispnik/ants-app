@@ -20,7 +20,8 @@ box to its slot and lets its ants take the cubes nearest where they come in,
 as they do in play; `src/test.lisp` then replays the order it found in the
 real game and fails unless every level is won. Clearing a picture unlocks
 the next; the level counter at the top left opens a picker of the unlocked
-ones, and the app reopens where it was left.
+ones, and the app reopens where it was left. The 2× button at the top right
+doubles the ants' speed.
 
 ## Building
 
@@ -76,4 +77,5 @@ SIMCTL_CHILD_ANTS_AUTOPLAY=1 xcrun simctl launch booted com.burnsidemk.ants
 
 `ANTS_AUTOPLAY=1` plays by itself, `ANTS_AUTOPLAY=careless` picks columns at
 random (and usually loses), `ANTS_LEVEL=n` starts at level n instead of the
-saved one, and `ANTS_PICKER=1` opens the level picker.
+saved one, `ANTS_PICKER=1` opens the level picker, and `ANTS_FAST=1` starts
+at double speed.
