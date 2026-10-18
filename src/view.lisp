@@ -169,6 +169,11 @@ shrinking and fading as it goes, then out of the scene."
     (setf (box-node box) node)
     node))
 
+(defun ant-scale ()
+  "How big ants are drawn: full size down to cubes of 14 points, and smaller
+with the cubes after that, so that one fits down a one-cube tunnel."
+  (min 1d0 (/ (game-cell-size *game*) 14d0)))
+
 (defun make-ant-node (ant)
   (let* ((char (box-colour (ant-box ant)))
          (node (rect-sprite (rgb char 0.75) 5 7))     ; thorax
@@ -181,6 +186,7 @@ shrinking and fading as it goes, then out of the scene."
     (objc:invoke butt "setAnchorPoint:" (point 0.5 1))
     (objc:invoke butt "setName:" "butt")
     (add node (at butt 0 -3))
+    (objc:invoke node "setScale:" (ant-scale))
     (z (at node (ant-x ant) (ant-y ant)) 20)
     (setf (ant-node ant) node)
     node))
@@ -293,9 +299,9 @@ it, under the ants walking by, and it shakes its abdomen until REST-END."
     (setf (ant-load ant) nil))
   (let ((heading (ant-heading ant)))
     (setf (ant-dropped ant)
-          (add *world* (z (at (make-cube (box-colour (ant-box ant)) 9)
-                              (+ (ant-x ant) (* 12 (cos heading)))
-                              (+ (ant-y ant) (* 12 (sin heading))))
+          (add *world* (z (at (make-cube (box-colour (ant-box ant)) (* 9 (ant-scale)))
+                              (+ (ant-x ant) (* 12 (ant-scale) (cos heading)))
+                              (+ (ant-y ant) (* 12 (ant-scale) (sin heading))))
                           15)))))
 
 (defun show-overlay (title subtitle colour)
@@ -472,8 +478,14 @@ rests, pickups -- at the same pace as the model."
   "Pictures down each of the picker's two columns."
   (ceiling (length *levels*) 2))
 
+(defun picker-step ()
+  "Rows 62 points apart, closer when there are too many for that."
+  (min 62 (/ 600 (picker-rows))))
+
 (defun picker-row-y (index)
-  (- 640 (* (mod index (picker-rows)) 62)))
+  "Rows centred on the middle of the panel's room."
+  (- (+ 400 (* (1- (picker-rows)) (picker-step) 1/2))
+     (* (mod index (picker-rows)) (picker-step))))
 
 (defun picker-x (index)
   (+ (/ *scene-width* 2) (if (< index (picker-rows)) -84 84)))
@@ -499,7 +511,7 @@ rests, pickups -- at the same pace as the model."
           for row from 0
           for playable = (< row open)
           for current = (= row *level-index*)
-          do (let ((button (rounded 156 50 12
+          do (let ((button (rounded 156 (min 50 (- (picker-step) 8)) 12
                                     (ui:color 1 1 1 (if playable 0.14 0.04))
                                     (if current (ui:color 0.55 0.95 0.55) (ui:color 1 1 1 (if playable 0.3 0.1)))
                                     (if current 3 1.5d0))))
@@ -518,7 +530,7 @@ rests, pickups -- at the same pace as the model."
   "A tap on an unlocked picture plays it; on a locked one, shakes it; outside
 the panel, closes the picker."
   (let ((row (loop for row below (length *levels*)
-                   when (within x y (picker-x row) (picker-row-y row) 78 25)
+                   when (within x y (picker-x row) (picker-row-y row) 78 (/ (picker-step) 2))
                      return row)))
     (cond ((and row (< row (unlocked)))
            (haptic 0)
