@@ -380,6 +380,7 @@ won, and what a tap does."
       (:deploy
        (destructuring-bind (box slot column) arguments
          (declare (ignore column))
+         (drop-ring)
          (let ((node (box-node box)))
            (objc:invoke node "setAlpha:" 1d0)
            (run node (move-to (slot-x game slot) *slot-y* 0.22d0)))
@@ -488,16 +489,25 @@ rests, pickups -- at the same pace as the model."
     (run note (action "waitForDuration:" 2.4d0) (action "fadeOutWithDuration:" 0.3d0)
          (action "removeFromParent"))))
 
+(defvar *ring* nil "The ring POINT-AT put round a box, until it fades or a box is tapped.")
+
 (defun point-at (box)
   "Pulse BOX, ringed in green, to say: tap this one."
   (let* ((node (box-node box))
          (ring (add node (rounded (+ *box-width* 10) (+ *box-height* 10) 14
                                   (ui:color 0 0 0 0) (ui:color 0.55 0.95 0.55) 3))))
+    (drop-ring)
+    (setf *ring* ring)
     (run ring (action "waitForDuration:" 2.4d0) (action "fadeOutWithDuration:" 0.3d0)
          (action "removeFromParent"))
     (run node (action "repeatAction:count:"
                       (action "sequence:" (vector (scale-to 1.12 0.18d0) (scale-to 1 0.18d0)))
                       4))))
+
+(defun drop-ring ()
+  (when *ring*
+    (objc:invoke *ring* "removeFromParent")
+    (setf *ring* nil)))
 
 (defun ask-hint (game)
   "The hint button: point at the box to tap, or say why there is none.  Only
@@ -679,7 +689,8 @@ the panel, closes the picker."
 ;;; Every half second it taps, through TAP-AT, the front box of a column
 ;;; whose colour has a cube within reach, or any box once the board is idle;
 ;;; and the overlay when a round ends.  ANTS_AUTOPLAY=careless taps a
-;;; column at random, which usually loses; ANTS_LEVEL=n starts at level n,
+;;; column at random, which usually loses; ANTS_AUTOPLAY=hints presses the
+;;; hint button before each move while it has hints, and taps where it points; ANTS_LEVEL=n starts at level n,
 ;;; from 1, instead of the saved one; ANTS_PICKER=1 opens the level picker;
 ;;; ANTS_FAST=1 starts at double speed.
 
@@ -689,6 +700,8 @@ the panel, closes the picker."
 
 (defvar *overlay-ticks* 0)
 (defvar *careless* nil)
+(defvar *hinting* nil "ANTS_AUTOPLAY=hints: press the hint button before each move.")
+(defvar *hint-pressed* nil "Set between pressing the hint button and following it.")
 
 (defun autoplay-tick ()
   (let ((game *game*))
@@ -698,8 +711,15 @@ the panel, closes the picker."
            (when (>= (incf *overlay-ticks*) 5)
              (setf *overlay-ticks* 0)
              (autotap (/ *scene-width* 2) 560)))
+          ((and *hinting* (free-slot game) (plusp *hints-left*) (not *hint-pressed*))
+           (setf *hint-pressed* t)
+           (autotap *hint-x* *slot-y*))
           ((free-slot game)
-           (let ((k (or (and *careless*
+           (let ((k (or (and *hint-pressed*
+                             (destructuring-bind (what &optional column) (hint game)
+                               (setf *hint-pressed* nil)
+                               (and (eq what :deploy) column)))
+                        (and *careless*
                              (let ((open (loop for column across (game-columns game)
                                                for k from 0 when column collect k)))
                                (when open (nth (random (length open)) open))))
@@ -742,7 +762,8 @@ the panel, closes the picker."
                  (ui:keep (objc:invoke (objc:invoke "UITapGestureRecognizer" "alloc")
                                        "initWithTarget:action:"
                                        (ui:action-target #'tapped) "fire:")))
-    (setf *careless* (equal (ext:getenv "ANTS_AUTOPLAY") "careless"))
+    (setf *careless* (equal (ext:getenv "ANTS_AUTOPLAY") "careless")
+          *hinting* (equal (ext:getenv "ANTS_AUTOPLAY") "hints"))
     (when (ext:getenv "ANTS_AUTOPLAY")
       (ui:after-every 0.5 (lambda (timer) (declare (ignore timer)) (autoplay-tick))))
     (values)))

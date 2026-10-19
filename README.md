@@ -80,6 +80,7 @@ SIMCTL_CHILD_ANTS_AUTOPLAY=1 xcrun simctl launch booted com.burnsidemk.ants
 ```
 
 `ANTS_AUTOPLAY=1` plays by itself, `ANTS_AUTOPLAY=careless` picks columns at
-random (and usually loses), `ANTS_LEVEL=n` starts at level n instead of the
+random (and usually loses), `ANTS_AUTOPLAY=hints` presses the hint button
+before each move while it has hints, `ANTS_LEVEL=n` starts at level n instead of the
 saved one, `ANTS_PICKER=1` opens the level picker, and `ANTS_FAST=1` starts
 at double speed.
