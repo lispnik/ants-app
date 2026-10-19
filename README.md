@@ -14,17 +14,26 @@ off its box's count, and an empty box frees its slot. Clear the picture to
 win. Fill every slot with boxes whose cubes are all still buried and the round
 is lost.
 
-Every deal is checked winnable before it is played: a search over deployment
-orders confirms that some order clears the plate. The search follows each
-box to its slot and lets its ants take the cubes nearest where they come in,
-as they do in play; `src/test.lisp` then replays the order it found in the
-real game and fails unless every level is won. Clearing a picture unlocks
-the next; the level counter at the top left opens a picker of the unlocked
-ones, and the app reopens where it was left. The 2× button at the top right
-doubles the ants' speed. A won round earns one to three stars, by its time
-against the picture's par -- how long the solver's own order takes -- and the
-picker shows the best. The ? button beside the slots points at a box to tap,
-three times a round; a hinted round earns two stars at most.
+Every level is dealt from a fixed seed and comes with an order that wins it.
+`src/tune.lisp` works these out ahead: a search over deployment orders, which
+follows each box to its slot and lets its ants take the cubes nearest where
+they come in, finds orders that clear the plate; each is played out in the
+real game, ants walking and resting, and the fastest that wins is improved a
+tap at a time. Ants are chaotic -- a frame a little longer or shorter can
+send one to a different cube -- so an order counts only if it wins at the
+frame steps of a 60Hz screen, the same at double speed, and a 120Hz screen;
+its slowest time is the picture's par. `src/test.lisp` plays every level's
+order again and fails unless each wins in its par.
+
+Clearing a picture unlocks the next; the level counter at the top left opens
+a picker of the unlocked ones, and the app reopens where it was left. The 2×
+button at the top right doubles the ants' speed. A won round earns one to
+three stars, by its time against the par, and the picker shows the best. The
+? button beside the slots points at a box to tap, three times a round, and a
+hinted round earns two stars at most. While the player keeps to the level's
+order, a hint is the next tap of it; off it, the search runs from where the
+round stands, and an order it finds is played out before the hint believes
+it; that can take a second or two, under a note saying so.
 
 ## Building
 
@@ -64,12 +73,15 @@ tools/testflight.sh --validate   # build and validate, upload nothing
 | `src/model.lisp` | the rules, in plain Lisp: levels, dealing, reachability, ants |
 | `src/view.lisp` | the SpriteKit scene, taps, and an autoplay mode for development |
 | `src/test.lisp` | plays every level headless, and fails if one can't be won: `sbcl --script src/test.lisp` |
+| `src/tune.lisp` | works out each level's order and par, and how hard it is: `sbcl --script src/tune.lisp [name ...]` |
 | `tools/make-icon.py` | draws `res/Ants.xcassets` with the standard library |
 | `tools/make-sounds.py` | synthesises `res/sounds/*.wav` with the standard library |
 | `tools/testflight.sh` | App Store build, check, validate, upload |
 
 A level is a list of strings, one character per cube; add one to `*levels*` in
-`src/model.lisp`.
+`src/model.lisp`, then run `src/tune.lisp` on it for its `:order` and `:par`.
+Without an order, a level is dealt from the first seed on whose solver's order
+wins, worked out as it starts.
 
 ## Development switches
 
@@ -81,6 +93,7 @@ SIMCTL_CHILD_ANTS_AUTOPLAY=1 xcrun simctl launch booted com.burnsidemk.ants
 
 `ANTS_AUTOPLAY=1` plays by itself, `ANTS_AUTOPLAY=careless` picks columns at
 random (and usually loses), `ANTS_AUTOPLAY=hints` presses the hint button
-before each move while it has hints, `ANTS_LEVEL=n` starts at level n instead of the
+before each move while it has hints, `ANTS_AUTOPLAY=astray` taps two columns
+at random first, `ANTS_LEVEL=n` starts at level n instead of the
 saved one, `ANTS_PICKER=1` opens the level picker, and `ANTS_FAST=1` starts
 at double speed.

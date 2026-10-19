@@ -480,14 +480,15 @@ rests, pickups -- at the same pace as the model."
     (objc:invoke *hint-button* "setAlpha:" (if (plusp *hints-left*) 1d0 0.4d0))))
 
 (defun say (string)
-  "A note over the slots for a couple of seconds."
+  "A note over the slots for a couple of seconds.  The note."
   (let ((note (z (at (rounded 300 36 12 (ui:color 0.08 0.08 0.10 0.92) (ui:color 1 1 1 0.4) 1.5d0)
                      (/ *scene-width* 2) (+ *slot-y* 48))
                  90)))
     (add note (text string 14 (ui:color 1 1 1) :font "AvenirNext-DemiBold"))
     (add *world* note)
     (run note (action "waitForDuration:" 2.4d0) (action "fadeOutWithDuration:" 0.3d0)
-         (action "removeFromParent"))))
+         (action "removeFromParent"))
+    note))
 
 (defvar *ring* nil "The ring POINT-AT put round a box, until it fades or a box is tapped.")
 
@@ -509,23 +510,44 @@ rests, pickups -- at the same pace as the model."
     (objc:invoke *ring* "removeFromParent")
     (setf *ring* nil)))
 
+(defvar *thinking* nil "Set while a hint is being worked out.")
+
 (defun ask-hint (game)
   "The hint button: point at the box to tap, or say why there is none.  Only
-a box pointed at uses a hint up."
+a box pointed at uses a hint up.  Off the level's order, the answer can take
+a second or two to work out, so a note says so first: the work starts on a
+timer, once the note has been drawn."
   (cond ((not (plusp *hints-left*))
          (shake *hint-button*))
+        (*thinking*)
+        ((or (game-plan game) (every #'null (game-columns game)))
+         (answer-hint game (hint game)))
         (t
-         (destructuring-bind (what &optional column) (hint game)
-           (ecase what
-             (:deploy
-              (decf *hints-left*)
-              (setf *hinted* t)
-              (show-hints)
-              (sound "hint")
-              (point-at (first (aref (game-columns game) column))))
-             (:wait (say "Wait for a box to empty"))
-             (:lost (say "No way to win from here: try again"))
-             (:unsure (say "No winning move found from here")))))))
+         (let ((note (say "Thinking…")))
+           (setf *thinking* t)
+           (ui:after-every 0.05d0
+                           (lambda (timer)
+                             (declare (ignore timer))
+                             (setf *thinking* nil)
+                             (objc:invoke note "removeFromParent")
+                             ;; Unless the round was left meanwhile.
+                             (when (eq game *game*)
+                               (answer-hint game (hint game))))
+                           :repeats nil)))))
+
+(defun answer-hint (game hint)
+  (destructuring-bind (what &optional column) hint
+    (ecase what
+      (:deploy
+       (decf *hints-left*)
+       (setf *hinted* t)
+       (show-hints)
+       (sound "hint")
+       (point-at (first (aref (game-columns game) column))))
+      (:wait (say "Wait for a box to empty"))
+      (:none (say "Nothing left to tap"))
+      (:lost (say "No way to win from here: try again"))
+      (:unsure (say "No winning move found from here")))))
 
 (defun frame (dt)
   (let ((game *game*))
@@ -690,7 +712,9 @@ the panel, closes the picker."
 ;;; whose colour has a cube within reach, or any box once the board is idle;
 ;;; and the overlay when a round ends.  ANTS_AUTOPLAY=careless taps a
 ;;; column at random, which usually loses; ANTS_AUTOPLAY=hints presses the
-;;; hint button before each move while it has hints, and taps where it points; ANTS_LEVEL=n starts at level n,
+;;; hint button before each move while it has hints, and taps where it points;
+;;; ANTS_AUTOPLAY=astray taps two columns at random first, so the hints must
+;;; find their own way; ANTS_LEVEL=n starts at level n,
 ;;; from 1, instead of the saved one; ANTS_PICKER=1 opens the level picker;
 ;;; ANTS_FAST=1 starts at double speed.
 
@@ -702,6 +726,7 @@ the panel, closes the picker."
 (defvar *careless* nil)
 (defvar *hinting* nil "ANTS_AUTOPLAY=hints: press the hint button before each move.")
 (defvar *hint-pressed* nil "Set between pressing the hint button and following it.")
+(defvar *astray* 0 "ANTS_AUTOPLAY=astray: columns to tap at random before asking.")
 
 (defun autoplay-tick ()
   (let ((game *game*))
@@ -711,6 +736,12 @@ the panel, closes the picker."
            (when (>= (incf *overlay-ticks*) 5)
              (setf *overlay-ticks* 0)
              (autotap (/ *scene-width* 2) 560)))
+          ((and (plusp *astray*) (free-slot game))
+           (decf *astray*)
+           (let ((open (loop for column across (game-columns game)
+                             for k from 0 when column collect k)))
+             (when open (autotap (column-x game (nth (random (length open)) open)) (queue-y 0)))))
+          (*thinking*)
           ((and *hinting* (free-slot game) (plusp *hints-left*) (not *hint-pressed*))
            (setf *hint-pressed* t)
            (autotap *hint-x* *slot-y*))
@@ -763,7 +794,8 @@ the panel, closes the picker."
                                        "initWithTarget:action:"
                                        (ui:action-target #'tapped) "fire:")))
     (setf *careless* (equal (ext:getenv "ANTS_AUTOPLAY") "careless")
-          *hinting* (equal (ext:getenv "ANTS_AUTOPLAY") "hints"))
+          *hinting* (member (ext:getenv "ANTS_AUTOPLAY") '("hints" "astray") :test #'equal)
+          *astray* (if (equal (ext:getenv "ANTS_AUTOPLAY") "astray") 2 0))
     (when (ext:getenv "ANTS_AUTOPLAY")
       (ui:after-every 0.5 (lambda (timer) (declare (ignore timer)) (autoplay-tick))))
     (values)))

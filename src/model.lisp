@@ -78,11 +78,13 @@ moment between one ant jumping and the next leaving does not count.")
   (columns 3)                           ; queue columns
   (difficulty 0)                        ; how strongly buried colours come first
   (seed 1)                              ; first seed tried for the queue
-  par)                                  ; seconds the solver's order takes: see STARS
+  order                                 ; the columns to tap, as a string of digits
+  par)                                  ; seconds ORDER takes: see STARS
 
 (defparameter *levels*
   (list
-   (make-level :name "Mushroom" :slots 3 :seed 11 :par 55
+   (make-level :name "Mushroom" :slots 3 :seed 11 :par 49
+               :order "102020221110"
                :rows '("....RRRR...."
                        "..RRWWRRRR.."
                        ".RRWWWWRRRR."
@@ -95,7 +97,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "...TKTTKT..."
                        "...TTTTTT..."
                        "....TTTT...."))
-   (make-level :name "Strawberry" :difficulty 0.6 :slots 4 :seed 1 :par 75
+   (make-level :name "Strawberry" :difficulty 0.6 :slots 4 :seed 1 :par 64
+               :order "011110120022020212210"
                :rows '("CCCCCGGGCCCCC"
                        "CCCGGGGGGGCCC"
                        "CCRRRGGGRRRCC"
@@ -109,7 +112,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "CCCCRRRRRCCCC"
                        "CCCCCRRRCCCCC"
                        "CCCCCCRCCCCCC"))
-   (make-level :name "Heart" :difficulty 0.25 :slots 3 :seed 30 :par 72
+   (make-level :name "Heart" :difficulty 0.25 :slots 3 :seed 30 :par 68
+               :order "00001101011112222202"
                :rows '("BBBBBBBBBBBBB"
                        "BBRRRBBBRRRBB"
                        "BRRWRRBRRRRRB"
@@ -122,7 +126,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "BBBBBRRRBBBBB"
                        "BBBBBBRBBBBBB"
                        "BBBBBBBBBBBBB"))
-   (make-level :name "Rocket" :difficulty 0.8 :slots 4 :seed 1 :par 80
+   (make-level :name "Rocket" :difficulty 0.8 :slots 4 :seed 1 :par 63
+               :order "0000222112110211100022"
                :rows '("BBBBBBRBBBBBB"
                        "BBBBBRRRBBBBB"
                        "BBBBBWWWBBBYB"
@@ -136,7 +141,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "BBRRBOYOBRRBB"
                        "BBBBBOYOBBBBB"
                        "BYBBBBOBBBBBB"))
-   (make-level :name "Flower" :difficulty 0.5 :slots 4 :seed 5 :par 78
+   (make-level :name "Flower" :difficulty 0.5 :slots 4 :seed 5 :par 74
+               :order "000002001212211212112"
                :rows '("CCCCCCCCCCCCCC"
                        "CCCCCPPPPCCCCC"
                        "CCCPPPPPPPPCCC"
@@ -151,7 +157,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "CCCCGGCGCGGCCC"
                        "CCCCCGGGGGCCCC"
                        "NNNNNNNGNNNNNN"))
-   (make-level :name "Fish" :difficulty 0.75 :slots 4 :seed 3 :par 100
+   (make-level :name "Fish" :difficulty 0.75 :slots 4 :seed 3 :par 91
+               :order "000010212222211111000221"
                :rows '("BBBBBBBBBBBBWB"
                        "BBBBBBYYYBBWBB"
                        "BBBBBOOOOOBBBB"
@@ -165,7 +172,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "GBBBBBBBBBBBBG"
                        "GGBBBGBBBBGBGG"
                        "NGGNNGGNNNGGGN"))
-   (make-level :name "Cat" :difficulty 0.7 :slots 4 :seed 1 :par 74
+   (make-level :name "Cat" :difficulty 0.7 :slots 4 :seed 1 :par 72
+               :order "00000010101112122112222"
                :rows '("PPPPPPPPPPPPPP"
                        "POPPPPPPPPPPOP"
                        "POOPPPPPPPPOOP"
@@ -179,7 +187,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "PPOOOWOOWOOOPP"
                        "PPPOOOOOOOOPPP"
                        "PPPPPPPPPPPPPP"))
-   (make-level :name "House" :difficulty 0.9 :slots 4 :seed 1 :par 132
+   (make-level :name "House" :difficulty 0.9 :slots 4 :seed 1 :par 73
+               :order "1111101000020020222221"
                :rows '("CCCCCCCCCCNNCC"
                        "CCCCCCRRCCNNCC"
                        "CCCCCRRRRCNNCC"
@@ -193,7 +202,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "CCCWWWNNWWWWCC"
                        "CCCWWWNNWWWWCC"
                        "GGGGGGGGGGGGGG"))
-   (make-level :name "Butterfly" :difficulty 0.3 :slots 4 :seed 48 :par 222
+   (make-level :name "Butterfly" :difficulty 0.3 :slots 4 :seed 48 :par 213
+               :order "2222220000000000000000000111111111111111112222221222222"
                :rows '("CCCCCCCCCCCCCCCCCCCCCC"
                        "CCCCCCCCKCCCCKCCCCCCCC"
                        "CCCPPPPPCKCCKCPPPPPCCC"
@@ -216,7 +226,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "CCCCCCCCCCKKCCCCCCCCCC"
                        "CCCCCCCCCCCCCCCCCCCCCC"
                        "CCCCCCCCCCCCCCCCCCCCCC"))
-   (make-level :name "Planet" :difficulty 0.3 :slots 4 :seed 20 :par 206
+   (make-level :name "Planet" :difficulty 0.3 :slots 4 :seed 20 :par 189
+               :order "20220000000000000000111110111110111112212112222212222222"
                :rows '("KKKKKKKKKKKKKKKKKKKKKK"
                        "KKWKKKKKKKKKKWKKKKKKKK"
                        "KKKKKKKKKKKKKKKKKKWKKK"
@@ -239,7 +250,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "KKKKKKKKKKKKKKKWKKKKKK"
                        "KKKKWKKKKKKKKKKKKKKKKK"
                        "KKKKKKKKKKKKKKKKKKKKKK"))
-   (make-level :name "Rainbow" :difficulty 0.9 :slots 3 :seed 1 :par 231
+   (make-level :name "Rainbow" :difficulty 0.9 :slots 3 :seed 1 :par 219
+               :order "000000000000000010101111111112111121212212222222222222"
                :rows '("CCCCCCCCCCCCCCCCCCCCCC"
                        "CCWWCCCCCCCCCCCCCCWWCC"
                        "CWWWWCCCCCCCCCCCCWWWWC"
@@ -262,7 +274,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "YYOORRRCCCCCCCCRRROOYY"
                        "GGGGGGGGGGGGGGGGGGGGGG"
                        "NNNNNNNNNNNNNNNNNNNNNN"))
-   (make-level :name "Target" :difficulty 0.8 :slots 4 :seed 46 :par 225
+   (make-level :name "Target" :difficulty 0.8 :slots 4 :seed 46 :par 200
+               :order "22222222222222111211011111101100010000000000000111112220"
                :rows '("CCCCCCCBBBBBBBBCCCCCCC"
                        "CCCCCBBWWWWWWWWBBCCCCC"
                        "CCCCBWWWRRRRRRWWWBCCCC"
@@ -285,7 +298,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "CCCCBWWWRRRRRRWWWBCCCC"
                        "CCCCCBBWWWWWWWWBBCCCCC"
                        "CCCCCCCBBBBBBBBCCCCCCC"))
-   (make-level :name "Spiral" :difficulty 0.6 :slots 4 :seed 23 :par 346
+   (make-level :name "Spiral" :difficulty 0.6 :slots 4 :seed 23 :par 314
+               :order "2222222222222222221111011100110000000000000000111111111"
                :rows '("RRRRRRRRRRRRRRRRRRRRRR"
                        "KKKKKKKKKKKKKKKKKKKKKO"
                        "GBBBBBBBBBBBBBBBBBBBKO"
@@ -308,7 +322,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "GKRRRRRRRRRRRRRRRRRPKO"
                        "GKKKKKKKKKKKKKKKKKKKKO"
                        "YYYYYYYYYYYYYYYYYYYYYO"))
-   (make-level :name "Sunflower" :difficulty 0.3 :slots 4 :seed 9 :par 218
+   (make-level :name "Sunflower" :difficulty 0.3 :slots 4 :seed 9 :par 201
+               :order "22222222021122222020000011000010110100100010111111211122"
                :rows '("CCCCCCCCCCCCCCCCCCCCCC"
                        "CCCCCCCCCCOYCCCCCCCCCC"
                        "CCCCCCYOCOOYYCYOCCCCCC"
@@ -331,7 +346,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "GGGGGGGGGGGGGGGGGGGGGG"
                        "GGGGGGGGGGGGGGGGGGGGGG"
                        "GGGGGGGGGGGGGGGGGGGGGG"))
-   (make-level :name "Waves" :difficulty 0.3 :slots 4 :seed 39 :par 245
+   (make-level :name "Waves" :difficulty 0.3 :slots 4 :seed 39 :par 203
+               :order "222212221011111100111001000000000000002222222222221111111"
                :rows '("WWWWWWWWWWWWWWWWWWWWWW"
                        "WBCCCBBBBBBBBCCCBBBBBW"
                        "WCCCCCBBBBBBCCCCCCBBBW"
@@ -354,7 +370,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "WCWWWCCBBBBCCWWWCCCBBW"
                        "WWWWWWCCCCCCWWWWWWCCCW"
                        "WWWWWWWWWWWWWWWWWWWWWW"))
-   (make-level :name "Diamond" :difficulty 0.3 :slots 4 :seed 28 :par 279
+   (make-level :name "Diamond" :difficulty 0.3 :slots 4 :seed 28 :par 174
+               :order "222222222001110111101111111100000000000001002012222221122221"
                :rows '("KKKKKKKKKKCCKKKKKKKKKK"
                        "KKKKKKKKKCWWCKKKKKKKKK"
                        "KKKKKKKKCWWWWCKKKKKKKK"
@@ -377,7 +394,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "KKKKKKKKCWWWWCKKKKKKKK"
                        "KKKKKKKKKCWWCKKKKKKKKK"
                        "KKKKKKKKKKCCKKKKKKKKKK"))
-   (make-level :name "Quilt" :difficulty 0.9 :slots 3 :seed 7 :par 372
+   (make-level :name "Quilt" :difficulty 0.9 :slots 3 :seed 7 :par 273
+               :order "00100100100000000000000111111222211111111122112222222222222"
                :rows '("RRRRRRBBBBBPPPPPCCCCCC"
                        "RRRRRRBBBBBPPPPPCCCCCC"
                        "RRGGGRBPPPBPOOOPCCCCCC"
@@ -400,7 +418,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "GGPPPGOOOOOWCCCWYWWWYY"
                        "GGGGGGOOOOOWWWWWYYYYYY"
                        "GGGGGGOOOOOWWWWWYYYYYY"))
-   (make-level :name "Mandala" :difficulty 0.9 :slots 3 :seed 13 :par 234
+   (make-level :name "Mandala" :difficulty 0.9 :slots 3 :seed 14 :par 276
+               :order "000000000000000001101111111111111211222212222222222222"
                :rows '("KKKKKKKYCCCWWWPKKKKKKK"
                        "KKKKKYCCCCCWWWWWPKKKKK"
                        "KKKKCCCCWWWBBBWWWWKKKK"
@@ -423,7 +442,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "KKKKGGGGCCCGGGBBBBKKKK"
                        "KKKKKRGGGGGBBBBBOKKKKK"
                        "KKKKKKKRGGGBBBOKKKKKKK"))
-   (make-level :name "Starry Night" :difficulty 0.9 :slots 3 :seed 8 :par 520
+   (make-level :name "Starry Night" :difficulty 0.9 :slots 3 :seed 8 :par 510
+               :order "000000000000000000000000001000000110111111111111111111111111111111222222222222222222222222222222222"
                :rows '("BBBBBBCCCBBBBBWWWBBWCCCBBBBBBB"
                        "BBBBBGKCWWWBBWWYWWBBCCCWOOOOOB"
                        "BBBBBKKWWYWWBWYYYWBBWCCOOYYYOO"
@@ -450,7 +470,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "NNKKGKKNNNNNNNNNNNNNNNNNNNNYWN"
                        "NNKGKKGKNNNNNNNNNNNNNNNNNNNNNN"
                        "NNGKKGKKGNNNNNNNNNNNNNNNNNNNNN"))
-   (make-level :name "Great Wave" :difficulty 0.5 :slots 3 :seed 9 :par 423
+   (make-level :name "Great Wave" :difficulty 0.5 :slots 3 :seed 13 :par 441
+               :order "11011111111111111111111111111110020002000020000000000000000022202200022222222222222222222221"
                :rows '("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
                        "TTTTTTTTTTTTTTWWWTTTTTTTTTTTTT"
                        "TTTTTTWTTTTTWWTTTWWTTTTTTTTTTT"
@@ -477,7 +498,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "BBBCCCBBBBBBBBBCCCBBBBBBBBBCCC"
                        "CCCBBBBBBBBBCCCBBBBBBBBBCCCBBB"
                        "BBBBBBBBBCCCBBBBBBBBBCCCBBBBBB"))
-   (make-level :name "Boogie Woogie" :difficulty 0.9 :slots 3 :seed 3 :par 438
+   (make-level :name "Boogie Woogie" :difficulty 0.9 :slots 3 :seed 5 :par 485
+               :order "000000000010000000001000001100200001211111111111111111111111112222222222222222222222222222"
                :rows '("WYWWYWWWWYWWWTWWWYWWBWWWWYWWYW"
                        "BYRYBRYRRYYYRBBBYBYYBYYRYYYYBY"
                        "WYWWYRRRWYWWWYTTTYWWBWWWWYWWRW"
@@ -504,7 +526,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "WRWWYWWWWYWWWYWWWYWWRWWWWYWWYW"
                        "YTYYYYYYBBRYYBBYYYRYRTRYYTYYYY"
                        "WYWWYWWWWYWWWYWWWYWWYWWWWYWWYW"))
-   (make-level :name "The Scream" :difficulty 0.9 :slots 3 :seed 1 :par 439
+   (make-level :name "The Scream" :difficulty 0.9 :slots 3 :seed 1 :par 521
+               :order "00000000000000000000000000000011011111111111111111111111111122212212222222222222222222222222"
                :rows '("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR"
                        "RROOOOORRRRRRRRRRROOOORRRRRRRR"
                        "OOOOOOOORRRRRRRROOOOOOOORRRRRR"
@@ -531,7 +554,8 @@ moment between one ant jumping and the next leaving does not count.")
                        "NNTNNNNTNNNNTKKKKKNNBBBNNNNNNN"
                        "NTNNNNTNNNNTKKKKKKKNBBBBBBNNBB"
                        "TNNNNTNNNNTNKKKKKKKNBBBBBBBBBB"))
-   (make-level :name "Kandinsky" :difficulty 0.9 :slots 3 :seed 14 :par 447
+   (make-level :name "Kandinsky" :difficulty 0.9 :slots 3 :seed 44 :par 415
+               :order "000000010100010011000000110000000001111111111111111111222222222221122222222222222222"
                :rows '("YYPPYYRROORRPPCCPPCCNNCCWWRRWW"
                        "YPKKPYROWWORPCGGCPCNPPNCWROORW"
                        "PKRRKPOWYYWOCGBBGCNPKKPNROGGOR"
@@ -555,7 +579,147 @@ moment between one ant jumping and the next leaving does not count.")
                        "YCGGCYKNPPNKKROORKWYCCYWGBNNBG"
                        "YCGGCYKNPPNKKROORKWYCCYWGBNNBG"
                        "NYCCYNBKNNKBGKRRKGOWYYWOTGBBGT"
-                       "NNYYNNBBKKBBGGKKGGOOWWOOTTGGTT"))))
+                       "NNYYNNBBKKBBGGKKGGOOWWOOTTGGTT"))
+   (make-level :name "Mona Lisa" :difficulty 0.6 :slots 3 :seed 27 :par 366
+               :order "0222222220200000000000000000000000000110110111111111111111111111111121222222222222222222220"
+               :rows '("CTGCCTCGGTGGTGCKGGGGGTCCGTTGGG"
+                      "GTGGTGCCGCGCKKKKKKKCCTCGCCTGGG"
+                      "GGGTCGTGCGCKKKKKKKKKTGCGCGCCTC"
+                      "GCCCGTCGTCKKKKKTKKKKKGCCGGGCGG"
+                      "CCCCTTGGGKKKKTTTTTKKKKGCGCCCGG"
+                      "GGGCGGGCGKKKTTTTTTTKKKGCGGGCGG"
+                      "GGCGGGCGKKKKTTTTTTTKKKKGGGCGGG"
+                      "GCGGGCGGKKKTOOTTTOOTKKKGGCGGGC"
+                      "CGGGCGGGKKKTTNTTTNTTKKKGCGGGCG"
+                      "GNGGGGNNNKKTTTTTTTTTKNNGGGNGGG"
+                      "NGGGTNGNNKKTTTTTTTTTKNNGGNGGGG"
+                      "NGGGGTGNNKKTTTTOTTTTKNNGGNGGGG"
+                      "GGGTNGGNNKKTTRTTTRTTKNNGNTTTTN"
+                      "GGGGTGGNNKKKTTRRRTTKKNNGNGGGGN"
+                      "GGGNGTGNNKKKTTTTTTTKKNNNGGGGNG"
+                      "NNGTNNNNNNKKKTTTTTKKNNNGNNNNNN"
+                      "NNNNGNNNNNNKKTTTTTKKNNNNNGNNNN"
+                      "NNNNNNGNNKTTTTTTTTTTTKNNNNNGNN"
+                      "NGNNNNNNKKKKTTTTTTTKKKKNNNNNNG"
+                      "NNNGNNNKKKKNKTTTTTKKKKKNGNNNNN"
+                      "NNNNNGKKKKNKKKKKNKKKKKNKKNGNNN"
+                      "GNNNNKKKKOOOOKKNKKKKKNKKKKNNGN"
+                      "NNGNKKKKNKTTTTTTTTTTNKKKKKNNNN"
+                      "NNNKKKKNKKTTTTTTTTTTKKKKKNKKNN"
+                      "NNKKKKNKKKTOTTOTTOTTKKKKNKKKKN"
+                      "NKKKKNKKKKKNKKKKKNKKKKKNKKKKKN"))
+   (make-level :name "Pearl Earring" :difficulty 0.3 :slots 3 :seed 27 :par 501
+               :order "111110000000000000000000000000000011011111011111111111111121111222222222222222222222222222222"
+               :rows '("KKKKKKKKKKKKBKKKKKKKKKKKKKKKKK"
+                      "KKKKKKKCBBBBBBBBBKYYYYKKKKKKKK"
+                      "KKKKKKBBCCCCCCCBBBYYYYOYKKKKKK"
+                      "KKKKKBBCCCCCCCCCBBBYYOYYKKKKKK"
+                      "KKKKKBCCCCCCCCCCCBBYOYYYKKKKKK"
+                      "KKKKBBBCCCCCCCCCBBBOYYYOKKKKKK"
+                      "KKKKKBBBCCCCCCCBBBBBYYOYKKKKKK"
+                      "KKKKKBBBBBBBBBBBBBBBYOYYKKKKKK"
+                      "KKKKKKBBBBBBBBBBBBBTOYYYKKKKKK"
+                      "KKKKKKKNBBBBBBBBBTTTYYYOKKKKKK"
+                      "KKKKKKKNTTTKWTTTWKTTTYOYKKKKKK"
+                      "KKKKKKKNTTTTTTTTTTTTTOYYKKKKKK"
+                      "KKKKKKKNTTTTTTTTTTTTTYYYKKKKKK"
+                      "KKKKKKKNTTTTTOOOTTTTTYYOKKKKKK"
+                      "KKKKKKKNTTTTTTTTTTTTTYOKKKKKKK"
+                      "KKKKKKKNKTTTTTTTTTTTYOYKKKKKKK"
+                      "KKKKKKKNKTTTRRRRTTTTOYKKKKKKKK"
+                      "KKKKKKKCWKTTTRRTTTTOYYKKKKKKKK"
+                      "KKKKKKKWWKKTTTTTTTKKKKKKKKKKKK"
+                      "KKKKKKKKNKKKTTTTTKKKKKKKKKKKKK"
+                      "KKKKKKKKWWWWWWWWWWWWWWKKKKKKKK"
+                      "KKKKKKKKWWWWWWWWWWWWWWKKKKKKKK"
+                      "KKKKKKKOOOONOOOONOOOONOOOONKKK"
+                      "KKKKKKOOONOOOONOOOONOOOONOOKKK"
+                      "KKKKKOONOOOONOOOONOOOONOOOOKKK"
+                      "KKKKONOOOONOOOONOOOONOOOONOKKK"))
+   (make-level :name "The Kiss" :difficulty 0.9 :slots 3 :seed 2 :par 503
+               :order "21212000000000000022222022111111000000000000000022222222222222222221121111111111111111111110"
+               :rows '("NNNONYYNONNOOYOOONNNNONNNOONNN"
+                      "OONNONOONNOOOGGGNNNONNONNNONOO"
+                      "ONNNNNONOONKKGGGYYYYOYONNNOOYO"
+                      "NONNNOOONYNKKKKKYYYYNNYNNNNYYN"
+                      "ONNOONOONNYKKKKKPRPRPONNNYOYNN"
+                      "OOYNOONNNNKKKKKKYTTTYONNNNNONN"
+                      "ONNNNYNNOYKKYKYYYTTTYYNNNNNONY"
+                      "NNNYNNONNYKKYWWYYTTTGYNNNONNNO"
+                      "NNNONOONYYYYYWWYYTTTWGYNOONYON"
+                      "NNNONONNYWWYYYYYYTTYGYYNONNNNN"
+                      "NNNONOYYYWWYYYYYYTTYYYYYNONOOO"
+                      "ONNONONYYWWYYYYYYRWRYYYYNNONNN"
+                      "ONYOONOYYWWYKKYYYYRYYYYYYONNYO"
+                      "YNNONNNYYYYYKKYYYYYYBYYYNONOON"
+                      "ONNOONNYYYKKKKYYYYYBWBYYNNOONY"
+                      "OOOONOOYYYKKYYYYYYYYBYGYNNONNN"
+                      "ONYNYOYYYYKKYYYYYYPYYGWGONONON"
+                      "NONNONNYYYYYWWYYYPWPYYGYNNNONN"
+                      "NNNNNNNYKKYYWWYYYYPYYYYYNNNOYO"
+                      "ONNNNYOYKKYYYYYYYYYYYRYYYNNNYO"
+                      "GGGGWPPYKKYYYYYYYYYYRWRYPGGGGG"
+                      "GGWGGGGYKKKKKYYYYBYYYRYYGGGYGG"
+                      "GGGGGGGYYYKKKYYYBWBYYYYYGGGPGG"
+                      "YGGGWGWYYYKKKYYYYBYYYYYYGGGWGW"
+                      "GWGGGGGYYYYYYYYYYYYYYYYYGGGYWG"
+                      "PYGGGGGGGPGYGYGGGGGWGGGGGGYGGG"))
+   (make-level :name "Café Terrace" :difficulty 0.9 :slots 3 :seed 1 :par 394
+               :order "201022000001111112222111121112122211121112222122221111111112222222222000000000000000000000000"
+               :rows '("OYYYYOYYYYOYBBBBBBBBBBBBBBBBBB"
+                      "YYYYOYYRROYYBBWYBBBBBBBBBBBBWY"
+                      "YYGGYYYRRYYYBBYBBBBBBBBWYBBBYB"
+                      "YYGGYYYRRYYYBBBBBBWYBBBYBBBBBB"
+                      "YOGGYYOYYYYOBBBWYBYBBBBBBBBBBB"
+                      "OYGGYOYYYYOYBBBYBBBBBBBBBBBWYB"
+                      "YYYYYYYYYYYYYBBBBBBBBWYBBBBYBB"
+                      "OOOOOOOOOOOOOOOBBBBKKKKKBBBBBB"
+                      "YYYYYYYYYYYYYYYYYBBKKKKKBBBBBB"
+                      "OOOOOOOOOOOOOOOOOOOKOKOKBBBBBB"
+                      "OYYYYOYYYYOYBBBBBBBKOKOKKKKKKK"
+                      "YYYYOYYYYOYYBBBBBBBKKKKKKKOKOK"
+                      "YYYOYYKYOYYYBBBKBBBKOKOKKKOKOK"
+                      "YYOYYYKOYYYKBBBKBBBKOKOKKKKKKK"
+                      "YOYWWYKYWWYKBBBKBBBKKKKKKKOKOK"
+                      "OYYNYOYYNYOKBWWBBBBKKOKKKKOKOK"
+                      "OOOOOOOOOOOOONOOOBBKKOKKKKKKKK"
+                      "OOOOOWWOOOOWWOOOOBBKKKKKKKKKKK"
+                      "OOOOONOOOOONOOOOOBBKKKKKKKKKKK"
+                      "BBCBBTCBTBCTBBCBBTCBTBCTBBCBBT"
+                      "CTBBCBBTCBTBCTBBCBBTCBTBCTBBCB"
+                      "TBCTBBCBBTCBTBCTBBCBBTCBTBCTBB"
+                      "CBTBCTBBCBBTCBTBCTBBCBBTCBTBCT"
+                      "BTCBTBCTBBCBBTCBTBCTBBCBBTCBTB"
+                      "CBBTCBTBCTBBCBBTCBTBCTBBCBBTCB"
+                      "BBCBBTCBTBCTBBCBBTCBTBCTBBCBBT"))
+   (make-level :name "Water Lilies" :difficulty 0.9 :slots 3 :seed 1 :par 369
+               :order "02111011111111111111111122111211111112222222222222222222222202002000000000000000000000200000"
+               :rows '("GGGGYGGYGGYGGGGGGYGGGGGGYGGGGY"
+                      "GGGGGGGYGGYGGYGGGGGYYGYYGGGGGY"
+                      "GGGGYGGGGGGGGGGGYGGGGYGGGGGGGY"
+                      "GGGGGGYGYGYGGGGGGGGGGGGGGGGGYG"
+                      "GGGGYYGGGGGNNNNNNNNGGGGGGGGGYY"
+                      "GGGYGGYGNNNGNGGNYGNNNNGYGGGGGY"
+                      "GGGGYNNNGNGGNYGNGGNGGNNNNGYGGG"
+                      "YGGNNGNGGNGNNNNNNNNGGNGGNNNGYY"
+                      "GNNNGGNGNNNKKKKKKKKNNNGGNGGNNG"
+                      "NGGNGNNNKKKGGGGGGGGKKKNNNGGNGN"
+                      "NYYNNKKKGGGGGGGGGGGGGGKKKNNNGG"
+                      "NNNKKGGGGGGGGYGGGYGGGGGGGKKNNG"
+                      "NKKBCCBCCBCCBCCBCCBCCBCCBCCKKN"
+                      "KCBCCBCCBCCBCCBCCBCCBCCBCCBCCK"
+                      "CBCGPPCBCCBCCBGGBCCBCCBCGGCCBC"
+                      "GGGGCCBCCBGGGPWBCCBCCGGGGCCBCC"
+                      "GGGCCBCCGGGGGCBCCBGGGGPPCCBCCG"
+                      "CBPPBCGGGGBCCBCCBGGGCCBCCBCGGG"
+                      "BCCBCCBCCBCCBCCBCCBCCBCCBCCBCC"
+                      "CCBCCBCCBPWBCCBCCBCCBCCBCCBCCB"
+                      "CBCCBCCBCCBCCBCCBCPPCCBCCBCCBC"
+                      "BCCBCCBCCGGCBCCBCCBCGBCCBPWBCC"
+                      "CCBCCGGGGGCBCCBCGGGGGCCBCCGGGG"
+                      "CBCGGGGGCCBCCGPPGGGBCCBCGGGGGC"
+                      "BCGGGPWCCBCCGGGGCCBCCBCGGGCBCC"
+                      "CCBCCBCCBCCBCCBCCBCCBCCBCCBCCB"))))
 
 (defun parse-picture (rows)
   "A 2D array (rows columns) of colour characters, NIL where there is no cube."
@@ -689,11 +853,19 @@ connected, so the default start reaches whatever any start can."
 ;;; An abstract round: a deployed box at once takes every cube of its colour
 ;;; it can reach, again and again as the taking uncovers more, until it is
 ;;; empty or nothing more is reachable.  A depth-first search over which
-;;; column to deploy from next, remembered by how far into each column it
-;;; has got, says whether some order clears the plate.  It is not exactly the
-;;; game -- there, two boxes of one colour share cubes as their ants happen to
-;;; arrive -- but it is close enough to keep the dealer from handing out a
-;;; queue nobody could win.
+;;; column to deploy from next says whether some order clears the plate.
+;;; It tries first the boxes that take the most at once, gives up on a
+;;; position as soon as no box within reach of the free slots can take
+;;; anything, and remembers each position it has been through -- how far
+;;; into each column, and what the boxes out still hold -- so as not to go
+;;; through it twice.  Not which cubes are left: positions that differ only
+;;; in which cubes of a colour went are near enough the same, and telling
+;;; them apart makes the search too slow to finish.
+;;;
+;;; It is not exactly the game: there, ants walk and rest, and two boxes of
+;;; one colour share cubes as their ants happen to arrive.  So an order it
+;;; finds can lose; with ACCEPT, the caller plays it out in the real model
+;;; and the search goes on past any that does.
 
 (defun cell-size (h w)
   "The side of a cube, in points, for a picture H by W."
@@ -725,46 +897,100 @@ ants do: measured from where they step onto the plate, below its slot."
         while progress)
   (remove-if #'zerop deployed :key #'second))
 
-(defun solvable-p (grid columns slots &key deployed budget)
+(defun reachable-colours (grid)
+  "The colours with a cube some ant can reach now."
+  (destructuring-bind (h w) (array-dimensions grid)
+    (let ((dist (flood grid -1 -1))
+          (colours '()))
+      (dotimes (r h colours)
+        (dotimes (c w)
+          (let ((colour (aref grid r c)))
+            (when (and colour
+                       (not (member colour colours))
+                       (loop for (dr dc) in *directions*
+                             for nr = (+ r dr)
+                             for nc = (+ c dc)
+                             thereis (and (walkable-p grid nr nc)
+                                          (>= (aref dist (cell-index w nr nc)) 0))))
+              (push colour colours))))))))
+
+(defun hopeless-p (columns pointers free reachable)
+  "After SETTLE, when nothing deployed can take more: whether no box any
+column could bring out within FREE more slots -- the boxes before it going
+out too, and taking nothing -- has a REACHABLE colour.  Then the slots fill
+and the round is lost, whatever the order."
+  (loop for column across columns
+        for p in pointers
+        never (loop for box in (nthcdr p column)
+                    repeat free
+                    thereis (member (first box) reachable))))
+
+(defun solvable-p (grid columns slots &key deployed budget accept (greedy t))
   "Whether some order of deployment from COLUMNS, each a list of
 (colour . count), clears GRID with SLOTS slots; and if so, the second value,
 the columns in that order.  DEPLOYED, as for SETTLE, are boxes already in
-slots.  With a BUDGET, it gives up after looking at that many positions:
-the third value is then :GAVE-UP."
+slots.  ACCEPT, given an order that clears the grid, may refuse it, and the
+search goes on.  GREEDY false tries columns from the left, not those whose
+boxes take most first.  With a BUDGET, it gives up after looking at that many
+positions: the third value is then :GAVE-UP."
   (let* ((seen (make-hash-table :test 'equal))
          (columns (coerce columns 'vector))
          (h (array-dimension grid 0))
          (w (array-dimension grid 1))
          (size (cell-size h w)))
-    (labels ((search-from (grid pointers deployed)
-               (cond ((zerop (cube-count grid)) (values t '()))
-                     ((gethash pointers seen) nil)
-                     ((and budget (> (hash-table-count seen) budget))
-                      (return-from solvable-p (values nil nil :gave-up)))
-                     (t
-                      (setf (gethash pointers seen) t)
-                      (let ((slot (loop for slot below slots
-                                        unless (find slot deployed :key #'fourth)
-                                          return slot)))
-                        (when slot
-                          (loop for k from 0
-                                for p in pointers
-                                for column = (aref columns k)
-                                when (< p (length column))
-                                  do (let* ((grid (copy-grid grid))
-                                            (box (nth p column))
-                                            (deployed (settle grid (cons (list (first box) (rest box)
-                                                                               (slot-entry-column slot slots w size)
-                                                                               slot)
-                                                                         (mapcar #'copy-list deployed))))
-                                            (pointers (copy-list pointers)))
-                                       (incf (nth k pointers))
-                                       (multiple-value-bind (won order) (search-from grid pointers deployed)
-                                         (when won
-                                           (return (values t (cons k order)))))))))))))
+    (labels ((key (pointers deployed)
+               (list pointers
+                     (sort (mapcar (lambda (box) (list (fourth box) (first box) (second box))) deployed)
+                           #'< :key #'first)))
+             (search-from (grid pointers deployed prefix)
+               (when (zerop (cube-count grid))
+                 (let ((order (reverse prefix)))
+                   (return-from search-from
+                     (if (or (null accept) (funcall accept order)) (values t order) nil))))
+               (let ((key (key pointers deployed))
+                     (slot (loop for slot below slots
+                                 unless (find slot deployed :key #'fourth)
+                                   return slot)))
+                 (when (or (null slot) (gethash key seen))
+                   (return-from search-from nil))
+                 (when (and budget (>= (hash-table-count seen) budget))
+                   (return-from solvable-p (values nil nil :gave-up)))
+                 (setf (gethash key seen) t)
+                 (let ((reachable (reachable-colours grid)))
+                   (when (hopeless-p columns pointers (- slots (length deployed)) reachable)
+                     (return-from search-from nil))
+                   ;; Every column's next position, those that take most first.
+                   (let ((moves '()))
+                     (loop for k from 0
+                           for p in pointers
+                           for column = (aref columns k)
+                           when (< p (length column))
+                             do (let* ((box (nth p column))
+                                       (new (list (first box) (rest box)
+                                                  (slot-entry-column slot slots w size) slot))
+                                       (pointers (copy-list pointers)))
+                                  (incf (nth k pointers))
+                                  (push (if (member (first box) reachable)
+                                            ;; Only a box that can take
+                                            ;; anything changes the grid.
+                                            (let* ((grid (copy-grid grid))
+                                                   (left (cube-count grid))
+                                                   (deployed (settle grid (cons new (mapcar #'copy-list deployed)))))
+                                              (list (- left (cube-count grid)) k grid pointers deployed))
+                                            (list 0 k grid pointers (cons new deployed)))
+                                        moves)))
+                     (loop for (nil k grid pointers deployed)
+                             in (if greedy
+                                    (stable-sort (nreverse moves) #'> :key #'first)
+                                    (nreverse moves))
+                           do (multiple-value-bind (won order)
+                                  (search-from grid pointers deployed (cons k prefix))
+                                (when won
+                                  (return-from search-from (values t order))))))))))
       (let ((grid (copy-grid grid)))
         (search-from grid (make-list (length columns) :initial-element 0)
-                     (settle grid (mapcar #'copy-list deployed)))))))
+                     (settle grid (mapcar #'copy-list deployed))
+                     '())))))
 
 ;;; ------------------------------------------------------------------
 ;;; dealing the boxes
@@ -827,15 +1053,37 @@ fill slots with ants that have nothing to reach yet."
             do (push box (nth (mod i columns) dealt)))
       (mapcar #'nreverse dealt))))
 
-(defun deal-winnable (grid level)
+(defparameter *deal-tries* 6
+  "Orders that lose when played out before DEAL-WINNABLE gives up on a way
+of searching a deal.")
+
+(defparameter *deal-budget* 20000
+  "Positions DEAL-WINNABLE lets the solver look at, each way, for each seed.")
+
+(defun deal-winnable (grid level &key accept)
   "A deal that SOLVABLE-P accepts, trying seeds from the level's own; the
-seed used is the second value, and the winning order it found the third."
+seed used is the second value, and the winning order it found the third.
+ACCEPT is SOLVABLE-P's, given the columns, the seed and an order.  For each
+seed the solver searches greedily and then from the left, each until it has
+had *DEAL-TRIES* orders refused or looked at *DEAL-BUDGET* positions."
   (loop for seed from (level-seed level)
         repeat 60
         for columns = (deal grid (level-columns level) seed (level-difficulty level))
-        do (multiple-value-bind (won order) (solvable-p grid columns (level-slots level))
-             (when won
-               (return-from deal-winnable (values columns seed order)))))
+        do (dolist (greedy '(t nil))
+             (let ((refused 0))
+               (multiple-value-bind (won order)
+                   (block search
+                     (solvable-p grid columns (level-slots level)
+                                 :greedy greedy
+                                 :budget *deal-budget*
+                                 :accept (and accept
+                                              (let ((columns columns) (seed seed))
+                                                (lambda (order)
+                                                  (or (funcall accept columns seed order)
+                                                      (when (>= (incf refused) *deal-tries*)
+                                                        (return-from search nil))))))))
+                 (when won
+                   (return-from deal-winnable (values columns seed order)))))))
   (values (deal grid (level-columns level) (level-seed level)) nil))
 
 ;;; ------------------------------------------------------------------
@@ -928,28 +1176,45 @@ height and the ant's, so that it reaches the edge without walking onto it.")
   "The column of the plate's bottom margin nearest SLOT, where its ants step on."
   (slot-entry-column slot (length (game-slots game)) (game-w game) (game-cell-size game)))
 
-(defun new-game (level)
+(defun make-round (level columns seed &optional plan)
+  "A round of LEVEL with the queue COLUMNS, as DEAL makes them, dealt by SEED."
   (let* ((grid (parse-picture (level-rows level)))
          (h (array-dimension grid 0))
          (w (array-dimension grid 1))
          (size (cell-size h w)))
-    (multiple-value-bind (columns seed plan) (deal-winnable grid level)
-      (make-game :level level
-                 :plan plan
-                 :grid grid
-                 :reserved (make-array (list h w) :initial-element nil)
-                 :w w :h h
-                 :cell-size size
-                 :left (- (/ *scene-width* 2) (/ (* w size) 2))
-                 :columns (map 'vector
-                               (lambda (column)
-                                 (loop for (colour . count) in column
-                                       collect (make-box :colour colour :count count)))
-                               columns)
-                 :slots (make-array (level-slots level) :initial-element nil)
-                 :cubes-left (cube-count grid)
-                 :seed seed
-                 :rng (make-rng (or seed (level-seed level)))))))
+    (make-game :level level
+               :plan plan
+               :grid grid
+               :reserved (make-array (list h w) :initial-element nil)
+               :w w :h h
+               :cell-size size
+               :left (- (/ *scene-width* 2) (/ (* w size) 2))
+               :columns (map 'vector
+                             (lambda (column)
+                               (loop for (colour . count) in column
+                                     collect (make-box :colour colour :count count)))
+                             columns)
+               :slots (make-array (level-slots level) :initial-element nil)
+               :cubes-left (cube-count grid)
+               :seed seed
+               :rng (make-rng (or seed (level-seed level))))))
+
+(defun new-game (level)
+  "A round of LEVEL, dealt by its seed and with its order as the plan; or,
+for a level without an order, the first deal from its seed whose solver's
+order wins when played out."
+  (let ((grid (parse-picture (level-rows level))))
+    (if (level-order level)
+        ;; Worked out ahead, by src/tune.lisp, and checked by src/test.lisp.
+        (make-round level
+                    (deal grid (level-columns level) (level-seed level) (level-difficulty level))
+                    (level-seed level)
+                    (map 'list #'digit-char-p (level-order level)))
+        (multiple-value-bind (columns seed plan)
+            (deal-winnable grid level
+                           :accept (lambda (columns seed order)
+                                     (play-out-checked (make-round level columns seed) order)))
+          (make-round level columns seed plan)))))
 
 ;;; Taps.
 
@@ -1130,45 +1395,114 @@ a cube of its colour."
        (loop for box across (game-slots game)
              never (and box (find-target game box)))))
 
+;;; Playing a round out, headless: to check an order in the real model.
+
+(defparameter *replay-dt* (/ 1d0 30) "Seconds a step when the model plays by itself.")
+
+(defun fork-game (game)
+  "A copy of GAME to play on without disturbing it: its own grid, boxes,
+ants and random sequence, and no plan."
+  (let ((boxes (make-hash-table :test 'eq))
+        (copy (copy-structure game)))
+    (flet ((box (box)
+             (or (gethash box boxes) (setf (gethash box boxes) (copy-box box)))))
+      (setf (game-grid copy) (copy-grid (game-grid game))
+            (game-reserved copy) (copy-grid (game-reserved game))
+            (game-columns copy) (map 'vector (lambda (column) (mapcar #'box column))
+                                     (game-columns game))
+            (game-slots copy) (map 'vector (lambda (box) (and box (box box))) (game-slots game))
+            (game-ants copy) (mapcar (lambda (ant)
+                                       (let ((new (copy-ant ant)))
+                                         (setf (ant-box new) (box (ant-box ant)))
+                                         new))
+                                     (game-ants game))
+            (game-rng copy) (copy-rng (game-rng game))
+            (game-plan copy) nil
+            (game-events copy) '()))
+    copy))
+
+(defun play-out (game order &key (limit 3600) (dt *replay-dt*))
+  "Play a copy of GAME on, DT a step, deploying from the columns in ORDER as
+fast as slots come free.  Whether it is won, and the game's time at the end."
+  (let ((game (fork-game game))
+        (order (copy-list order)))
+    (loop while (and (eq (game-state game) :playing) (< (game-time game) limit))
+          do (when (and order (free-slot game))
+               (unless (deploy game (pop order))
+                 (return-from play-out (values nil (game-time game)))))
+             (step-game game dt)
+             (setf (game-events game) '()))
+    (values (eq (game-state game) :won) (game-time game))))
+
 ;;; Hints and stars.
+
+(defparameter *check-steps* (list (/ 1d0 30) (/ 1d0 60) (/ 1d0 120))
+  "Frame steps an order must win at to be trusted: a 60Hz screen's at double
+speed, a 60Hz screen's, and a 120Hz screen's.  Ants are chaotic enough that
+an order that wins at one step can lose at another.")
+
+(defun play-out-checked (game order)
+  "Whether ORDER wins from GAME at every one of *CHECK-STEPS*; and the
+longest it takes."
+  (let ((worst 0d0))
+    (dolist (dt *check-steps* (values t worst))
+      (multiple-value-bind (won time) (play-out game order :dt dt)
+        (unless won (return (values nil time)))
+        (setf worst (max worst time))))))
 
 (defparameter *hint-budget* 400
   "Positions a hint may search before it gives up: enough for the solver to
 find its way from most positions, and quick enough on a phone.")
 
+(defparameter *hint-tries* 4
+  "Orders a hint may play out, to find one that wins, before it gives up.")
+
 (defun hint (game)
-  "What to do now: (:deploy k) to tap column K, (:wait) when a winning order
-goes on with the boxes already out, (:lost) when the solver can show there
-is none, or (:unsure) when it looked as far as it may and found nothing.
+  "What to do now: (:deploy k) to tap column K, (:none) when there is nothing
+left to tap, (:wait) when a winning order goes on with the boxes already
+out, (:lost) when the solver can show there is none, or (:unsure) when it
+looked as far as it may and found nothing.
 While the player keeps to the order the deal was checked with, the next
 column of that; otherwise the solver's, from where the round stands."
-  (cond ((game-plan game)
+  (cond ((every #'null (game-columns game)) (list :none))
+        ((game-plan game)
          (if (free-slot game) (list :deploy (first (game-plan game))) (list :wait)))
         (t (replan game))))
 
 (defun replan (game)
   "HINT from where the round stands, keeping the order it finds as the plan.
 Cubes ants are on their way to count as taken, and boxes as short of the
-ants already out."
+ants already out.  An order the solver finds is played out before it is
+believed, and the search goes on past one that loses."
   (let ((grid (copy-grid (game-grid game)))
-        (slots (length (game-slots game))))
+        (slots (length (game-slots game)))
+        (tries 0))
     (dotimes (i (array-total-size grid))
       (when (row-major-aref (game-reserved game) i)
         (setf (row-major-aref grid i) nil)))
+    (setf (game-plan game) nil)
     (multiple-value-bind (won order gave-up)
-        (solvable-p grid
-                    (loop for column across (game-columns game)
-                          collect (loop for box in column
-                                        collect (cons (box-colour box) (box-count box))))
-                    slots
-                    :budget *hint-budget*
-                    :deployed (loop for box across (game-slots game)
-                                    for slot from 0
-                                    when (and box (> (box-count box) (box-out box)))
-                                      collect (list (box-colour box) (- (box-count box) (box-out box))
-                                                    (entry-column game slot) slot)))
-      (setf (game-plan game) order)
-      (cond (gave-up (list :unsure))
+        (block search
+          (solvable-p grid
+                      (loop for column across (game-columns game)
+                            collect (loop for box in column
+                                          collect (cons (box-colour box) (box-count box))))
+                      slots
+                      :budget *hint-budget*
+                      :accept (lambda (order)
+                                (when (> (incf tries) *hint-tries*)
+                                  (return-from search (values nil nil :gave-up)))
+                                (play-out game order))
+                      :deployed (loop for box across (game-slots game)
+                                      for slot from 0
+                                      when (and box (> (box-count box) (box-out box)))
+                                        collect (list (box-colour box) (- (box-count box) (box-out box))
+                                                      (entry-column game slot) slot))))
+      (when won (setf (game-plan game) order))
+      (cond ((or gave-up (and (not won) (plusp tries)))
+             ;; An order the solver believed lost when played: it may not
+             ;; have looked at the one that wins.
+             (list :unsure))
             ((not won) (list :lost))
             ((and order (free-slot game)) (list :deploy (first order)))
             (t (list :wait))))))
