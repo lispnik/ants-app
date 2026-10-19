@@ -25,6 +25,11 @@
 (defvar *picker* nil "The level picker, while it is open.")
 (defvar *fast* nil "Whether the ants go at double speed; the 2x button toggles it.")
 (defvar *fast-button* nil)
+(defvar *hint-button* nil)
+(defvar *hints-left* 0 "Hints still to be had this round.")
+(defvar *hinted* nil "Whether this round has had a hint, which costs it a star.")
+(defparameter *hints-per-round* 3)
+(defparameter *hint-x* 362d0 "Where the hint button is, right of the slots.")
 
 ;;; ------------------------------------------------------------------
 ;;; progress, kept in NSUserDefaults across launches
@@ -51,6 +56,19 @@
 
 (defun saved-level ()
   (max 0 (min (saved "level") (1- (unlocked)))))
+
+(defun best-stars (level)
+  "The most stars LEVEL has been won with, 0 if never.  By name, so that
+adding pictures does not shuffle them."
+  (saved (format nil "stars ~a" (level-name level))))
+
+(defun record-stars (level stars)
+  (when (> stars (best-stars level))
+    (save (format nil "stars ~a" (level-name level)) stars)))
+
+(defun star-string (stars)
+  (with-output-to-string (out)
+    (dotimes (i 3) (write-string (if (< i stars) "★" "☆") out))))
 
 ;;; ------------------------------------------------------------------
 ;;; nodes
@@ -143,6 +161,27 @@ shrinking and fading as it goes, then out of the scene."
 (defun haptic (&optional (style 0))
   (objc:invoke (objc:invoke (objc:invoke "UIImpactFeedbackGenerator" "alloc") "initWithStyle:" style)
                "impactOccurred"))
+
+;;; Sounds, from res/sounds: tools/make-sounds.py.  The audio session is
+;;; ambient, so they mix with the player's music and the ring/silent switch
+;;; silences them.
+
+(defvar *sounds* (make-hash-table :test 'equal) "An SKAction per sound, made once.")
+(defvar *last-plop* 0)
+
+(defun sound (name)
+  (let ((play (or (gethash name *sounds*)
+                  (setf (gethash name *sounds*)
+                        (ui:keep (action "playSoundFileNamed:waitForCompletion:"
+                                         (format nil "~a.wav" name) nil))))))
+    (objc:invoke *scene* "runAction:" play)))
+
+(defun plop ()
+  "An ant down a hole: at most one plop in 60ms, or a crowd of them is a buzz."
+  (let ((now (get-internal-real-time)))
+    (when (> (- now *last-plop*) (* 0.06 internal-time-units-per-second))
+      (setf *last-plop* now)
+      (sound "plop"))))
 
 ;;; ------------------------------------------------------------------
 ;;; the round's pieces
@@ -238,6 +277,17 @@ tappable, the rows behind dimmed, the rest hidden and counted."
     (setf *fast-button* (add *world* (at (rounded 56 28 8 (ui:color 1 1 1 0.15)) 351 776)))
     (add *fast-button* (text "2×" 15 (ui:color 1 1 1) :font "AvenirNext-DemiBold"))
     (show-speed)
+    ;; The hint button, right of the slots.
+    (setf *hints-left* *hints-per-round*
+          *hinted* nil
+          *hint-button* (add *world* (at (rounded 40 40 20 (ui:color 1 1 1 0.15) (ui:color 1 1 1 0.4) 1.5d0)
+                                         *hint-x* *slot-y*)))
+    (add *hint-button* (at (text "?" 22 (ui:color 1 1 1)) 0 0))
+    (let ((badge (add *hint-button* (at (rounded 18 18 9 (ui:color 0.95 0.75 0.20)) 15 15))))
+      (objc:invoke badge "setName:" "badge")
+      (let ((count (add badge (text "" 11 (ui:color 0.15 0.12 0.12)))))
+        (objc:invoke count "setName:" "count")))
+    (show-hints)
     ;; The plate and the picture on it.
     (add *world* (at (rounded plate-w plate-h 8 (ui:color 0.80 0.78 0.74) (ui:color 0.55 0.53 0.50) 2)
                      (/ *scene-width* 2) (- *plate-top* (/ (* h size) 2))))
@@ -304,12 +354,18 @@ it, under the ants walking by, and it shakes its abdomen until REST-END."
                               (+ (ant-y ant) (* 12 (ant-scale) (sin heading))))
                           15)))))
 
-(defun show-overlay (title subtitle colour)
-  (let ((panel (z (at (rounded 300 150 18 (ui:color 0.08 0.08 0.10 0.92) colour 3)
+(defun show-overlay (title subtitle colour &key stars detail)
+  "The round's end: TITLE, and under it STARS and a DETAIL line when it was
+won, and what a tap does."
+  (let ((panel (z (at (rounded 300 (if stars 210 150) 18 (ui:color 0.08 0.08 0.10 0.92) colour 3)
                       (/ *scene-width* 2) 560)
-                  100)))
-    (add panel (at (text title 34 colour) 0 22))
-    (add panel (at (text subtitle 16 (ui:color 1 1 1 0.85) :font "AvenirNext-DemiBold") 0 -28))
+                  100))
+        (top (if stars 52 22)))
+    (add panel (at (text title 34 colour) 0 top))
+    (when stars
+      (add panel (at (text (star-string stars) 30 (ui:color 0.98 0.80 0.25)) 0 (- top 42)))
+      (add panel (at (text detail 14 (ui:color 1 1 1 0.7) :font "AvenirNext-Medium") 0 (- top 74))))
+    (add panel (at (text subtitle 16 (ui:color 1 1 1 0.85) :font "AvenirNext-DemiBold") 0 (if stars -78 -28)))
     (objc:invoke panel "setScale:" 0.6d0)
     (add *world* panel)
     (run panel (scale-to 1 0.2d0))
@@ -349,6 +405,7 @@ it, under the ants walking by, and it shakes its abdomen until REST-END."
        (let* ((ant (first arguments))
               (box (ant-box ant)))
          (jump-in (ant-node ant) (ant-hole ant))
+         (plop)
          (setf (ant-node ant) nil)
          (objc:invoke (box-label box) "setText:" (princ-to-string (box-count box)))))
       (:box-done
@@ -357,13 +414,25 @@ it, under the ants walking by, and it shakes its abdomen until REST-END."
          (setf (box-node box) nil (box-label box) nil)))
       (:won
        (haptic 2)
+       (sound "won")
        (unlock (+ *level-index* 2))
-       (show-overlay "Cleared!"
-                     (if (< (1+ *level-index*) (length *levels*)) "Tap for the next picture" "Tap to play again")
-                     (ui:color 0.55 0.95 0.55)))
+       (let ((stars (stars game *hinted*)))
+         (record-stars (game-level game) stars)
+         (show-overlay "Cleared!"
+                       (if (< (1+ *level-index*) (length *levels*)) "Tap for the next picture" "Tap to play again")
+                       (ui:color 0.55 0.95 0.55)
+                       :stars stars
+                       :detail (format nil "~a, par ~a~:[~;, with a hint~]"
+                                       (clock (game-time game)) (clock (level-par (game-level game)))
+                                       *hinted*))))
       (:lost
        (haptic 2)
+       (sound "lost")
        (show-overlay "Stuck!" "No ants can reach a cube. Tap to retry." (ui:color 1.0 0.55 0.45))))))
+
+(defun clock (seconds)
+  (multiple-value-bind (minutes seconds) (floor (round seconds) 60)
+    (format nil "~d:~2,'0d" minutes seconds)))
 
 (defparameter *sway* 1.6d0 "Points an ant sways to either side as it walks.")
 (defparameter *stride* 0.35d0 "Radians of sway per point walked.")
@@ -401,6 +470,52 @@ rests, pickups -- at the same pace as the model."
   (save "fast" (if *fast* 1 0))
   (haptic 0)
   (show-speed))
+
+(defun show-hints ()
+  "The hint button's badge counts the hints left; with none, it dims."
+  (let ((badge (objc:invoke *hint-button* "childNodeWithName:" "badge")))
+    (objc:invoke (objc:invoke badge "childNodeWithName:" "count") "setText:"
+                 (princ-to-string *hints-left*))
+    (objc:invoke *hint-button* "setAlpha:" (if (plusp *hints-left*) 1d0 0.4d0))))
+
+(defun say (string)
+  "A note over the slots for a couple of seconds."
+  (let ((note (z (at (rounded 300 36 12 (ui:color 0.08 0.08 0.10 0.92) (ui:color 1 1 1 0.4) 1.5d0)
+                     (/ *scene-width* 2) (+ *slot-y* 48))
+                 90)))
+    (add note (text string 14 (ui:color 1 1 1) :font "AvenirNext-DemiBold"))
+    (add *world* note)
+    (run note (action "waitForDuration:" 2.4d0) (action "fadeOutWithDuration:" 0.3d0)
+         (action "removeFromParent"))))
+
+(defun point-at (box)
+  "Pulse BOX, ringed in green, to say: tap this one."
+  (let* ((node (box-node box))
+         (ring (add node (rounded (+ *box-width* 10) (+ *box-height* 10) 14
+                                  (ui:color 0 0 0 0) (ui:color 0.55 0.95 0.55) 3))))
+    (run ring (action "waitForDuration:" 2.4d0) (action "fadeOutWithDuration:" 0.3d0)
+         (action "removeFromParent"))
+    (run node (action "repeatAction:count:"
+                      (action "sequence:" (vector (scale-to 1.12 0.18d0) (scale-to 1 0.18d0)))
+                      4))))
+
+(defun ask-hint (game)
+  "The hint button: point at the box to tap, or say why there is none.  Only
+a box pointed at uses a hint up."
+  (cond ((not (plusp *hints-left*))
+         (shake *hint-button*))
+        (t
+         (destructuring-bind (what &optional column) (hint game)
+           (ecase what
+             (:deploy
+              (decf *hints-left*)
+              (setf *hinted* t)
+              (show-hints)
+              (sound "hint")
+              (point-at (first (aref (game-columns game) column))))
+             (:wait (say "Wait for a box to empty"))
+             (:lost (say "No way to win from here: try again"))
+             (:unsure (say "No winning move found from here")))))))
 
 (defun frame (dt)
   (let ((game *game*))
@@ -459,6 +574,8 @@ rests, pickups -- at the same pace as the model."
            (start-level (if (eq (game-state game) :won) (1+ *level-index*) *level-index*)))
           ((within x y 351 776 32 20)
            (toggle-speed))
+          ((within x y *hint-x* *slot-y* 24 24)
+           (ask-hint game))
           (t
            (loop for column across (game-columns game)
                  for k from 0
@@ -467,7 +584,8 @@ rests, pickups -- at the same pace as the model."
                           for row below *queue-visible*
                           when (within x y cx (queue-y row) (/ *box-width* 2) (/ *queue-step* 2))
                             do (cond ((and (zerop row) (deploy game k))
-                                      (haptic 0))
+                                      (haptic 0)
+                                      (sound "tap"))
                                      (t (shake (box-node box))))
                                (return-from tap-at)))))))
 
@@ -516,8 +634,12 @@ rests, pickups -- at the same pace as the model."
                                     (if current (ui:color 0.55 0.95 0.55) (ui:color 1 1 1 (if playable 0.3 0.1)))
                                     (if current 3 1.5d0))))
                (objc:invoke button "setName:" (format nil "row~d" row))
-               (add button (text (format nil "~d   ~a" (1+ row) (if playable (level-name level) "Locked"))
-                                 16 (ui:color 1 1 1 (if playable 1 0.35)) :font "AvenirNext-DemiBold"))
+               (let ((stars (if playable (best-stars level) 0)))
+                 (add button (at (text (format nil "~d   ~a" (1+ row) (if playable (level-name level) "Locked"))
+                                       15 (ui:color 1 1 1 (if playable 1 0.35)) :font "AvenirNext-DemiBold")
+                                 0 (if (plusp stars) 6 0)))
+                 (when (plusp stars)
+                   (add button (at (text (star-string stars) 11 (ui:color 0.98 0.80 0.25)) 0 -11))))
                (add picker (at button (picker-x row) (picker-row-y row)))))
     (setf *picker* (add *world* picker))))
 
@@ -609,6 +731,8 @@ the panel, closes the picker."
       (setf *view* (ui:keep view)
             *scene* (ui:keep scene))
       (setf *fast* (or (= 1 (saved "fast")) (and (ext:getenv "ANTS_FAST") t)))
+      (objc:invoke (objc:invoke "AVAudioSession" "sharedInstance") "setCategory:error:"
+                   "AVAudioSessionCategoryAmbient" nil)
       (start-level (let ((n (ext:getenv "ANTS_LEVEL")))
                      (if n (1- (or (parse-integer n :junk-allowed t) 1)) (saved-level))))
       (when (ext:getenv "ANTS_PICKER")

@@ -13,7 +13,7 @@
   :entry-point "ants:start"
   :description "A puzzle game: deploy coloured ant boxes so their ants can carry away a pixel picture of cubes, without filling every slot with boxes whose cubes are buried."
   :version #.(or (uiop:getenv "ANTS_BUILD") "1")
-  :bundle-short-version "1.5.0"
+  :bundle-short-version "1.6.0"
   :serial t
   :depends-on ("objc/uikit")
   :pathname "src"
@@ -40,7 +40,11 @@
                       ("ITSAppUsesNonExemptEncryption" . :false))
   ;; 1024x1024 with no alpha; tools/make-icon.py draws it.
   :bundle-icon "res/Ants.xcassets"
-  :bundle-frameworks ("UIKit" "Foundation" "CoreGraphics" "SpriteKit")
+  ;; tools/make-sounds.py synthesises these.  In the bundle's root, where
+  ;; SpriteKit's playSoundFileNamed: looks.
+  :bundle-resources ("res/sounds/tap.wav" "res/sounds/plop.wav" "res/sounds/hint.wav"
+                     "res/sounds/won.wav" "res/sounds/lost.wav")
+  :bundle-frameworks ("UIKit" "Foundation" "CoreGraphics" "SpriteKit" "AVFoundation")
 
   :code-signing-identity #.(or (uiop:getenv "IOS_SIGNING_IDENTITY") :automatic)
   :development-team #.(uiop:getenv "IOS_DEVELOPMENT_TEAM")

@@ -21,7 +21,10 @@ as they do in play; `src/test.lisp` then replays the order it found in the
 real game and fails unless every level is won. Clearing a picture unlocks
 the next; the level counter at the top left opens a picker of the unlocked
 ones, and the app reopens where it was left. The 2× button at the top right
-doubles the ants' speed.
+doubles the ants' speed. A won round earns one to three stars, by its time
+against the picture's par -- how long the solver's own order takes -- and the
+picker shows the best. The ? button beside the slots points at a box to tap,
+three times a round; a hinted round earns two stars at most.
 
 ## Building
 
@@ -62,6 +65,7 @@ tools/testflight.sh --validate   # build and validate, upload nothing
 | `src/view.lisp` | the SpriteKit scene, taps, and an autoplay mode for development |
 | `src/test.lisp` | plays every level headless, and fails if one can't be won: `sbcl --script src/test.lisp` |
 | `tools/make-icon.py` | draws `res/Ants.xcassets` with the standard library |
+| `tools/make-sounds.py` | synthesises `res/sounds/*.wav` with the standard library |
 | `tools/testflight.sh` | App Store build, check, validate, upload |
 
 A level is a list of strings, one character per cube; add one to `*levels*` in
