@@ -35,8 +35,10 @@
 ;;; progress, kept in NSUserDefaults across launches
 ;;;
 ;;; "unlocked" is how many levels may be played, from the first; clearing a
-;;; level unlocks the next.  "level" is the one being played, so the app
-;;; opens where it was left.
+;;; level unlocks the next.  It is kept uncapped, and also worked out from the
+;;; levels won, so that pictures added after the last one was cleared open
+;;; up.  "level" is the one being played, so the app opens where it was left
+;;; -- or on the next one, if that was the newest level cleared.
 
 (defun defaults ()
   (objc:invoke "NSUserDefaults" "standardUserDefaults"))
@@ -47,15 +49,23 @@
 (defun save (key value)
   (objc:invoke (defaults) "setInteger:forKey:" value key))
 
+(defun cleared-p (index)
+  (and (< -1 index (length *levels*))
+       (plusp (best-stars (nth index *levels*)))))
+
 (defun unlocked ()
-  (max 1 (min (length *levels*) (saved "unlocked"))))
+  (let ((newest (or (position-if #'plusp *levels* :key #'best-stars :from-end t) -1)))
+    (max 1 (min (length *levels*) (max (saved "unlocked") (+ newest 2))))))
 
 (defun unlock (count)
-  (when (> count (unlocked))
-    (save "unlocked" (min count (length *levels*)))))
+  (when (> count (saved "unlocked"))
+    (save "unlocked" count)))
 
 (defun saved-level ()
-  (max 0 (min (saved "level") (1- (unlocked)))))
+  (let ((level (saved "level")))
+    (when (and (cleared-p level) (not (cleared-p (1+ level))))
+      (incf level))
+    (max 0 (min level (1- (unlocked))))))
 
 (defun best-stars (level)
   "The most stars LEVEL has been won with, 0 if never.  By name, so that
