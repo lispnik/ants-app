@@ -28,7 +28,8 @@ order again and fails unless each wins in its par.
 Clearing a picture unlocks the next; the level counter at the top left opens
 a picker of the unlocked ones, and the app reopens where it was left. The 2×
 button at the top right doubles the ants' speed. A won round earns one to
-three stars, by its time against the par, and the picker shows the best. The
+three stars, by its time against the par, and the picker shows the best; the
+round's time and the par show between the picture and the slots. The
 ? button beside the slots points at a box to tap, three times a round, and a
 hinted round earns two stars at most. While the player keeps to the level's
 order, a hint is the next tap of it; off it, the search runs from where the

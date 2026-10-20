@@ -22,6 +22,8 @@
 (defvar *more-labels* nil "Per queue column, the label counting boxes not drawn.")
 (defvar *last-time* nil)
 (defvar *shown-left* nil "The cube count the status line last showed.")
+(defvar *timer* nil "The label under the picture showing the round's time.")
+(defvar *shown-seconds* nil "The whole seconds the timer last showed.")
 (defvar *picker* nil "The level picker, while it is open.")
 (defvar *fast* nil "Whether the ants go at double speed; the 2x button toggles it.")
 (defvar *fast-button* nil)
@@ -261,7 +263,13 @@ tappable, the rows behind dimmed, the rest hidden and counted."
   (unless (eql *shown-left* (game-cubes-left game))
     (setf *shown-left* (game-cubes-left game))
     (objc:invoke *status* "setText:"
-                 (format nil "~a  ·  ~d left" (level-name (game-level game)) (game-cubes-left game)))))
+                 (format nil "~a  ·  ~d left" (level-name (game-level game)) (game-cubes-left game))))
+  (let ((seconds (floor (game-time game))))
+    (unless (eql *shown-seconds* seconds)
+      (setf *shown-seconds* seconds)
+      (objc:invoke *timer* "setText:"
+                   (let ((par (level-par (game-level game))))
+                     (format nil "~a~@[  /  par ~a~]" (clock seconds) (and par (clock par))))))))
 
 (defun build-round (game)
   "Every node of a fresh round, under a new world node."
@@ -270,6 +278,7 @@ tappable, the rows behind dimmed, the rest hidden and counted."
         *overlay* nil
         *picker* nil
         *shown-left* nil
+        *shown-seconds* nil
         *last-time* nil)
   (let* ((size (game-cell-size game))
          (w (game-w game))
@@ -312,6 +321,9 @@ tappable, the rows behind dimmed, the rest hidden and counted."
     (dolist (side '(:left :right))
       (destructuring-bind (x . y) (hole-point game side)
         (add *world* (at (ellipse 30 17 (ui:color 0.05 0.04 0.03) (ui:color 0.30 0.22 0.14)) x y))))
+    ;; The timer, between the picture and the slots.
+    (setf *timer* (add *world* (at (text "" 14 (ui:color 1 1 1 0.75) :font "AvenirNext-DemiBold")
+                                   (/ *scene-width* 2) (+ *slot-y* 38))))
     ;; Deployment slots.
     (dotimes (slot (length (game-slots game)))
       (add *world* (at (rounded (+ *box-width* 6) (+ *box-height* 6) 12
