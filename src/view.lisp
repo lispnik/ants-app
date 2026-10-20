@@ -659,9 +659,21 @@ timer, once the note has been drawn."
 ;;; ------------------------------------------------------------------
 ;;; the level picker: every picture, the unlocked ones playable
 
+(defparameter *picker-page-size* 20 "Pictures on each page of the picker.")
+(defvar *picker-page* 0 "The page of the picker showing.")
+
+(defun picker-pages ()
+  (ceiling (length *levels*) *picker-page-size*))
+
+(defun picker-page-levels ()
+  "The indexes of the pictures on the page showing."
+  (loop for index from (* *picker-page* *picker-page-size*)
+        below (min (length *levels*) (* (1+ *picker-page*) *picker-page-size*))
+        collect index))
+
 (defun picker-rows ()
   "Pictures down each of the picker's two columns."
-  (ceiling (length *levels*) 2))
+  (ceiling (min *picker-page-size* (length *levels*)) 2))
 
 (defun picker-step ()
   "Rows 62 points apart, closer when there are too many for that."
@@ -669,19 +681,29 @@ timer, once the note has been drawn."
 
 (defun picker-row-y (index)
   "Rows centred on the middle of the panel's room."
-  (- (+ 400 (* (1- (picker-rows)) (picker-step) 1/2))
-     (* (mod index (picker-rows)) (picker-step))))
+  (- (+ 390 (* (1- (picker-rows)) (picker-step) 1/2))
+     (* (mod (mod index *picker-page-size*) (picker-rows)) (picker-step))))
 
 (defun picker-x (index)
-  (+ (/ *scene-width* 2) (if (< index (picker-rows)) -84 84)))
+  (+ (/ *scene-width* 2) (if (< (mod index *picker-page-size*) (picker-rows)) -84 84)))
+
+(defun picker-title-y ()
+  (- (picker-top) 34))
+
+(defun picker-arrow-x (step)
+  "Where the arrow to the page STEP away is: -1 left, 1 right."
+  (+ (/ *scene-width* 2) (* step 145)))
 
 (defun picker-top ()
-  (+ (picker-row-y 0) 75))
+  "Above the first row, with room for the title and, over one page, the page count."
+  (+ (picker-row-y 0) (if (> (picker-pages) 1) 95 75)))
 
 (defun picker-bottom ()
   (- (picker-row-y (1- (picker-rows))) 40))
 
-(defun show-picker ()
+(defun show-picker (&optional (page (floor *level-index* *picker-page-size*)))
+  (close-picker)
+  (setf *picker-page* (mod page (picker-pages)))
   (let* ((open (unlocked))
          (top (picker-top))
          (bottom (picker-bottom))
@@ -691,9 +713,17 @@ timer, once the note has been drawn."
                     (/ *scene-width* 2) (/ *scene-height* 2)))
     (add picker (at (rounded 360 (- top bottom) 18 (ui:color 0.08 0.08 0.10 0.95) (ui:color 1 1 1 0.45) 2)
                     (/ *scene-width* 2) (/ (+ top bottom) 2)))
-    (add picker (at (text "Pictures" 22 (ui:color 1 1 1)) (/ *scene-width* 2) (- top 34)))
-    (loop for level in *levels*
-          for row from 0
+    (add picker (at (text "Pictures" 22 (ui:color 1 1 1)) (/ *scene-width* 2) (picker-title-y)))
+    (when (> (picker-pages) 1)
+      (add picker (at (text (format nil "~d/~d" (1+ *picker-page*) (picker-pages)) 13
+                            (ui:color 1 1 1 0.6) :font "AvenirNext-DemiBold")
+                      (/ *scene-width* 2) (- (picker-title-y) 20)))
+      (dolist (step '(-1 1))
+        (let ((arrow (add picker (at (rounded 44 34 10 (ui:color 1 1 1 0.14) (ui:color 1 1 1 0.3) 1.5d0)
+                                     (picker-arrow-x step) (picker-title-y)))))
+          (add arrow (text (if (minusp step) "‹" "›") 26 (ui:color 1 1 1))))))
+    (loop for row in (picker-page-levels)
+          for level = (nth row *levels*)
           for playable = (< row open)
           for current = (= row *level-index*)
           do (let ((button (rounded 156 (min 50 (- (picker-step) 8)) 12
@@ -718,10 +748,16 @@ timer, once the note has been drawn."
 (defun picker-tap (x y)
   "A tap on an unlocked picture plays it; on a locked one, shakes it; outside
 the panel, closes the picker."
-  (let ((row (loop for row below (length *levels*)
+  (let ((row (loop for row in (picker-page-levels)
                    when (within x y (picker-x row) (picker-row-y row) 78 (/ (picker-step) 2))
                      return row)))
-    (cond ((and row (< row (unlocked)))
+    (cond ((and (> (picker-pages) 1) (within x y (picker-arrow-x -1) (picker-title-y) 26 20))
+           (haptic 0)
+           (show-picker (1- *picker-page*)))
+          ((and (> (picker-pages) 1) (within x y (picker-arrow-x 1) (picker-title-y) 26 20))
+           (haptic 0)
+           (show-picker (1+ *picker-page*)))
+          ((and row (< row (unlocked)))
            (haptic 0)
            (start-level row))
           (row
