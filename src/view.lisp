@@ -321,9 +321,12 @@ tappable, the rows behind dimmed, the rest hidden and counted."
     (dolist (side '(:left :right))
       (destructuring-bind (x . y) (hole-point game side)
         (add *world* (at (ellipse 30 17 (ui:color 0.05 0.04 0.03) (ui:color 0.30 0.22 0.14)) x y))))
-    ;; The timer, between the picture and the slots.
+    ;; The timer, midway between the picture's plate and the slots.
     (setf *timer* (add *world* (at (text "" 14 (ui:color 1 1 1 0.75) :font "AvenirNext-DemiBold")
-                                   (/ *scene-width* 2) (+ *slot-y* 38))))
+                                   (/ *scene-width* 2)
+                                   (/ (+ (- *plate-top* (/ (* h size) 2) (/ plate-h 2))
+                                         *slot-y* (/ (+ *box-height* 6) 2))
+                                      2))))
     ;; Deployment slots.
     (dotimes (slot (length (game-slots game)))
       (add *world* (at (rounded (+ *box-width* 6) (+ *box-height* 6) 12
