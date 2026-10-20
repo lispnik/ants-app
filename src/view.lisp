@@ -498,7 +498,12 @@ rests, pickups -- at the same pace as the model."
          (ring (add node (rounded (+ *box-width* 10) (+ *box-height* 10) 14
                                   (ui:color 0 0 0 0) (ui:color 0.55 0.95 0.55) 3))))
     (drop-ring)
-    (setf *ring* ring)
+    ;; Retained, because the ring removes itself: once its fade ends, its
+    ;; parent was the only owner (+shapeNodeWithRect: hands back a node nobody
+    ;; owns), so it was freed while *RING* still pointed at it, and the next
+    ;; tap's DROP-RING messaged freed memory -- a pointer authentication trap
+    ;; in object_getClass, on TestFlight build 202610192349.
+    (setf *ring* (objc:retain ring))
     (run ring (action "waitForDuration:" 2.4d0) (action "fadeOutWithDuration:" 0.3d0)
          (action "removeFromParent"))
     (run node (action "repeatAction:count:"
@@ -506,9 +511,14 @@ rests, pickups -- at the same pace as the model."
                       4))))
 
 (defun drop-ring ()
+  "Take the ring off, if there is one, and give up POINT-AT's hold on it.
+-removeFromParent on a ring that has already faded and removed itself does
+nothing."
   (when *ring*
-    (objc:invoke *ring* "removeFromParent")
-    (setf *ring* nil)))
+    (let ((ring *ring*))
+      (setf *ring* nil)
+      (objc:invoke ring "removeFromParent")
+      (objc:release ring))))
 
 (defvar *thinking* nil "Set while a hint is being worked out.")
 
