@@ -25,6 +25,7 @@
 (defvar *timer* nil "The label under the picture showing the round's time.")
 (defvar *shown-seconds* nil "The whole seconds the timer last showed.")
 (defvar *picker* nil "The level picker, while it is open.")
+(defvar *settings* nil "The settings panel, while it is open.")
 (defvar *fast* nil "Whether the ants go at double speed; the 2x button toggles it.")
 (defvar *fast-button* nil)
 (defvar *hint-button* nil)
@@ -32,6 +33,7 @@
 (defvar *hinted* nil "Whether this round has had a hint, which costs it a star.")
 (defparameter *hints-per-round* 3)
 (defparameter *hint-x* 362d0 "Where the hint button is, right of the slots.")
+(defparameter *settings-x* 28d0 "Where the settings button is, left of the slots.")
 
 ;;; ------------------------------------------------------------------
 ;;; progress, kept in NSUserDefaults across launches
@@ -77,6 +79,11 @@ adding pictures does not shuffle them."
 (defun record-stars (level stars)
   (when (> stars (best-stars level))
     (save (format nil "stars ~a" (level-name level)) stars)))
+
+(defun scoring-p ()
+  "Whether rounds are scored, by time against par in stars.  Saved as its
+opposite, so that it is on until turned off."
+  (zerop (saved "no scoring")))
 
 (defun star-string (stars)
   (with-output-to-string (out)
@@ -277,6 +284,7 @@ tappable, the rows behind dimmed, the rest hidden and counted."
   (setf *world* (add *scene* (objc:invoke "SKNode" "node"))
         *overlay* nil
         *picker* nil
+        *settings* nil
         *shown-left* nil
         *shown-seconds* nil
         *last-time* nil)
@@ -302,6 +310,10 @@ tappable, the rows behind dimmed, the rest hidden and counted."
           *hint-button* (add *world* (at (rounded 40 40 20 (ui:color 1 1 1 0.15) (ui:color 1 1 1 0.4) 1.5d0)
                                          *hint-x* *slot-y*)))
     (add *hint-button* (at (text "?" 22 (ui:color 1 1 1)) 0 0))
+    ;; The settings button, left of the slots.
+    (let ((button (add *world* (at (rounded 40 40 20 (ui:color 1 1 1 0.15) (ui:color 1 1 1 0.4) 1.5d0)
+                                   *settings-x* *slot-y*))))
+      (add button (at (text "⚙︎" 22 (ui:color 1 1 1) :font "AvenirNext-Medium") 0 1)))
     (let ((badge (add *hint-button* (at (rounded 18 18 9 (ui:color 0.95 0.75 0.20)) 15 15))))
       (objc:invoke badge "setName:" "badge")
       (let ((count (add badge (text "" 11 (ui:color 0.15 0.12 0.12)))))
@@ -327,6 +339,7 @@ tappable, the rows behind dimmed, the rest hidden and counted."
                                    (/ (+ (- *plate-top* (/ (* h size) 2) (/ plate-h 2))
                                          *slot-y* (/ (+ *box-height* 6) 2))
                                       2))))
+    (objc:invoke *timer* "setHidden:" (not (scoring-p)))
     ;; Deployment slots.
     (dotimes (slot (length (game-slots game)))
       (add *world* (at (rounded (+ *box-width* 6) (+ *box-height* 6) 12
@@ -447,7 +460,7 @@ won, and what a tap does."
          (show-overlay "Cleared!"
                        (if (< (1+ *level-index*) (length *levels*)) "Tap for the next picture" "Tap to play again")
                        (ui:color 0.55 0.95 0.55)
-                       :stars stars
+                       :stars (and (scoring-p) stars)
                        :detail (format nil "~a, par ~a~:[~;, with a hint~]"
                                        (clock (game-time game)) (clock (level-par (game-level game)))
                                        *hinted*))))
@@ -586,8 +599,8 @@ timer, once the note has been drawn."
 
 (defun frame (dt)
   (let ((game *game*))
-    ;; The round holds still while the picker is open.
-    (when (and game (not *picker*))
+    ;; The round holds still while the picker or the settings are open.
+    (when (and game (not *picker*) (not *settings*))
       (step-game game (* dt (pace)))
       (dolist (event (take-events game))
         (handle game event))
@@ -635,8 +648,11 @@ timer, once the note has been drawn."
   (let ((game *game*))
     (cond ((null game))
           (*picker* (picker-tap x y))
+          (*settings* (settings-tap x y))
           ((within x y 40 776 36 20)
            (show-picker))
+          ((within x y *settings-x* *slot-y* 24 24)
+           (show-settings))
           (*overlay*
            (start-level (if (eq (game-state game) :won) (1+ *level-index*) *level-index*)))
           ((within x y 351 776 32 20)
@@ -731,7 +747,7 @@ timer, once the note has been drawn."
                                     (if current (ui:color 0.55 0.95 0.55) (ui:color 1 1 1 (if playable 0.3 0.1)))
                                     (if current 3 1.5d0))))
                (objc:invoke button "setName:" (format nil "row~d" row))
-               (let ((stars (if playable (best-stars level) 0)))
+               (let ((stars (if (and playable (scoring-p)) (best-stars level) 0)))
                  (add button (at (text (format nil "~d   ~a" (1+ row) (if playable (level-name level) "Locked"))
                                        15 (ui:color 1 1 1 (if playable 1 0.35)) :font "AvenirNext-DemiBold")
                                  0 (if (plusp stars) 6 0)))
@@ -766,6 +782,60 @@ the panel, closes the picker."
                         180 (/ (- (picker-top) (picker-bottom)) 2)))
            (close-picker)))))
 
+;;; ------------------------------------------------------------------
+;;; settings
+
+(defparameter *settings-y* 430d0 "The middle of the settings panel.")
+
+(defun settings-switch-y () (+ *settings-y* 10))
+(defun settings-done-y () (- *settings-y* 62))
+
+(defun show-settings ()
+  (close-settings)
+  (let ((panel (z (objc:invoke "SKNode" "node") 200))
+        (on (scoring-p)))
+    ;; A shade over the round; a tap on it closes the settings.
+    (add panel (at (rect-sprite (ui:color 0 0 0 0.45) *scene-width* *scene-height*)
+                   (/ *scene-width* 2) (/ *scene-height* 2)))
+    (add panel (at (rounded 320 220 18 (ui:color 0.08 0.08 0.10 0.95) (ui:color 1 1 1 0.45) 2)
+                   (/ *scene-width* 2) *settings-y*))
+    (add panel (at (text "Settings" 22 (ui:color 1 1 1)) (/ *scene-width* 2) (+ *settings-y* 76)))
+    ;; Scoring: a label, what it means, and a switch.
+    (dolist (line '(("Time and stars" 17 1 "AvenirNext-DemiBold" 9)
+                    ("Score each round against par" 12 0.6 "AvenirNext-Medium" -12)))
+      (destructuring-bind (string size alpha font dy) line
+        (let ((label (text string size (ui:color 1 1 1 alpha) :font font)))
+          (objc:invoke label "setHorizontalAlignmentMode:" 1) ; left
+          (add panel (at label 52 (+ (settings-switch-y) dy))))))
+    (let ((switch (add panel (at (rounded 54 32 16 (if on (ui:color 0.30 0.78 0.40) (ui:color 1 1 1 0.2))
+                                          (ui:color 1 1 1 0.35) 1.5d0)
+                                 300 (settings-switch-y)))))
+      (add switch (at (ellipse 26 26 (ui:color 1 1 1) (ui:color 0 0 0 0.15)) (if on 11 -11) 0)))
+    ;; Done.
+    (let ((done (add panel (at (rounded 120 40 12 (ui:color 1 1 1 0.14) (ui:color 1 1 1 0.3) 1.5d0)
+                               (/ *scene-width* 2) (settings-done-y)))))
+      (add done (text "Done" 17 (ui:color 1 1 1) :font "AvenirNext-DemiBold")))
+    (setf *settings* (add *world* panel))))
+
+(defun close-settings ()
+  (when *settings*
+    (objc:invoke *settings* "removeFromParent")
+    (setf *settings* nil)))
+
+(defun toggle-scoring ()
+  (save "no scoring" (if (scoring-p) 1 0))
+  (objc:invoke *timer* "setHidden:" (not (scoring-p)))
+  (show-settings))
+
+(defun settings-tap (x y)
+  "A tap on the scoring row flips it; on Done or outside the panel, closes."
+  (cond ((within x y (/ *scene-width* 2) (settings-switch-y) 150 24)
+         (haptic 0)
+         (toggle-scoring))
+        ((or (within x y (/ *scene-width* 2) (settings-done-y) 60 20)
+             (not (within x y (/ *scene-width* 2) *settings-y* 160 110)))
+         (close-settings))))
+
 (defun tap-view-point (in-view)
   "A tap at IN-VIEW, a point in the SKView's coordinates (y down)."
   (let ((in-scene (objc:invoke *scene* "convertPointFromView:" in-view)))
@@ -786,7 +856,8 @@ the panel, closes the picker."
 ;;; hint button before each move while it has hints, and taps where it points;
 ;;; ANTS_AUTOPLAY=astray taps two columns at random first, so the hints must
 ;;; find their own way; ANTS_LEVEL=n starts at level n,
-;;; from 1, instead of the saved one; ANTS_PICKER=1 opens the level picker;
+;;; from 1, instead of the saved one; ANTS_PICKER=1 opens the level picker,
+;;; and ANTS_SETTINGS=1 the settings;
 ;;; ANTS_FAST=1 starts at double speed.
 
 (defun autotap (x y)
@@ -801,7 +872,7 @@ the panel, closes the picker."
 
 (defun autoplay-tick ()
   (let ((game *game*))
-    (cond ((or (null game) *picker*))
+    (cond ((or (null game) *picker* *settings*))
           (*overlay*
            ;; Leave the result up long enough to be read.
            (when (>= (incf *overlay-ticks*) 5)
@@ -859,6 +930,8 @@ the panel, closes the picker."
                      (if n (1- (or (parse-integer n :junk-allowed t) 1)) (saved-level))))
       (when (ext:getenv "ANTS_PICKER")
         (show-picker))
+      (when (ext:getenv "ANTS_SETTINGS")
+        (show-settings))
       (objc:invoke view "presentScene:" scene))
     (objc:invoke view "addGestureRecognizer:"
                  (ui:keep (objc:invoke (objc:invoke "UITapGestureRecognizer" "alloc")

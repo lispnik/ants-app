@@ -34,7 +34,9 @@ slots. The ? button beside the slots points at a box to tap, three times a
 round, and a hinted round earns two stars at most. While the player keeps to
 the level's order, a hint is the next tap of it; off it, the search runs from
 where the round stands, and an order it finds is played out before the hint
-believes it; that can take a second or two, under a note saying so.
+believes it; that can take a second or two, under a note saying so. The
+settings button, left of the slots, turns the scoring off: then there is no
+timer, the picker shows no stars, and a cleared picture just says so.
 
 ## Building
 
@@ -95,6 +97,6 @@ SIMCTL_CHILD_ANTS_AUTOPLAY=1 xcrun simctl launch booted com.burnsidemk.ants
 `ANTS_AUTOPLAY=1` plays by itself, `ANTS_AUTOPLAY=careless` picks columns at
 random (and usually loses), `ANTS_AUTOPLAY=hints` presses the hint button
 before each move while it has hints, `ANTS_AUTOPLAY=astray` taps two columns
-at random first, `ANTS_LEVEL=n` starts at level n instead of the
-saved one, `ANTS_PICKER=1` opens the level picker, and `ANTS_FAST=1` starts
-at double speed.
+at random first, `ANTS_LEVEL=n` starts at level n instead of the saved one,
+`ANTS_PICKER=1` opens the level picker, `ANTS_SETTINGS=1` the settings, and
+`ANTS_FAST=1` starts at double speed.
