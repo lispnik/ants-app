@@ -34,6 +34,7 @@
 (defparameter *hints-per-round* 3)
 (defparameter *hint-x* 362d0 "Where the hint button is, right of the slots.")
 (defparameter *settings-x* 28d0 "Where the settings button is, left of the slots.")
+(defun restart-y () "The restart button, under the settings button, level with the queue's front." (queue-y 0))
 
 ;;; ------------------------------------------------------------------
 ;;; progress, kept in NSUserDefaults across launches
@@ -177,9 +178,34 @@ shrinking and fading as it goes, then out of the scene."
        (action "moveByX:y:duration:" -12d0 0d0 0.08d0)
        (action "moveByX:y:duration:" 6d0 0d0 0.04d0)))
 
-(defun haptic (&optional (style 0))
-  (objc:invoke (objc:invoke (objc:invoke "UIImpactFeedbackGenerator" "alloc") "initWithStyle:" style)
-               "impactOccurred"))
+(defun vibration-p ()
+  "Whether to buzz; the settings can turn it off."
+  (zerop (saved "no vibration")))
+
+;;; The feedback generators, made once each: a fresh one per buzz is slow to
+;;; wake and is never freed.
+
+(defvar *impacts* (make-hash-table) "A UIImpactFeedbackGenerator per style.")
+(defvar *notifier* nil "The UINotificationFeedbackGenerator.")
+
+(defun haptic (&optional (style 0) intensity)
+  "A tap: STYLE 0 light, 1 medium, 2 heavy; INTENSITY, from 0 to 1, softens it."
+  (when (vibration-p)
+    (let ((generator (or (gethash style *impacts*)
+                         (setf (gethash style *impacts*)
+                               (ui:keep (objc:invoke (objc:invoke "UIImpactFeedbackGenerator" "alloc")
+                                                     "initWithStyle:" style))))))
+      (if intensity
+          (objc:invoke generator "impactOccurredWithIntensity:" (float intensity 1d0))
+          (objc:invoke generator "impactOccurred")))))
+
+(defun notify (kind)
+  "The system's pattern for KIND, :success or :error."
+  (when (vibration-p)
+    (objc:invoke (or *notifier*
+                     (setf *notifier* (ui:keep (objc:invoke (objc:invoke "UINotificationFeedbackGenerator" "alloc")
+                                                            "init"))))
+                 "notificationOccurred:" (ecase kind (:success 0) (:error 2)))))
 
 ;;; Sounds, from res/sounds: tools/make-sounds.py.  The audio session is
 ;;; ambient, so they mix with the player's music and the ring/silent switch
@@ -189,17 +215,20 @@ shrinking and fading as it goes, then out of the scene."
 (defvar *last-plop* 0)
 
 (defun sound (name)
-  (let ((play (or (gethash name *sounds*)
-                  (setf (gethash name *sounds*)
-                        (ui:keep (action "playSoundFileNamed:waitForCompletion:"
-                                         (format nil "~a.wav" name) nil))))))
-    (objc:invoke *scene* "runAction:" play)))
+  (when (zerop (saved "no sound"))
+    (let ((play (or (gethash name *sounds*)
+                    (setf (gethash name *sounds*)
+                          (ui:keep (action "playSoundFileNamed:waitForCompletion:"
+                                           (format nil "~a.wav" name) nil))))))
+      (objc:invoke *scene* "runAction:" play))))
 
 (defun plop ()
-  "An ant down a hole: at most one plop in 60ms, or a crowd of them is a buzz."
+  "An ant down a hole: at most one plop, and one soft tick, in 60ms, or a
+crowd of them is a buzz."
   (let ((now (get-internal-real-time)))
     (when (> (- now *last-plop*) (* 0.06 internal-time-units-per-second))
       (setf *last-plop* now)
+      (haptic 0 0.45)
       (sound "plop"))))
 
 ;;; ------------------------------------------------------------------
@@ -281,8 +310,9 @@ tappable, the rows behind dimmed, the rest hidden and counted."
 (defun build-round (game)
   "Every node of a fresh round, under a new world node."
   (when *world* (objc:invoke *world* "removeFromParent"))
-  (setf *world* (add *scene* (objc:invoke "SKNode" "node"))
-        *overlay* nil
+  (setf *world* (add *scene* (objc:invoke "SKNode" "node")))
+  (fit-world t)
+  (setf *overlay* nil
         *picker* nil
         *settings* nil
         *shown-left* nil
@@ -314,6 +344,10 @@ tappable, the rows behind dimmed, the rest hidden and counted."
     (let ((button (add *world* (at (rounded 40 40 20 (ui:color 1 1 1 0.15) (ui:color 1 1 1 0.4) 1.5d0)
                                    *settings-x* *slot-y*))))
       (add button (at (text "⚙︎" 22 (ui:color 1 1 1) :font "AvenirNext-Medium") 0 1)))
+    ;; The restart button, under it.
+    (let ((button (add *world* (at (rounded 40 40 20 (ui:color 1 1 1 0.15) (ui:color 1 1 1 0.4) 1.5d0)
+                                   *settings-x* (restart-y)))))
+      (add button (at (text "↻" 22 (ui:color 1 1 1) :font "AvenirNext-DemiBold") 0 0)))
     (let ((badge (add *hint-button* (at (rounded 18 18 9 (ui:color 0.95 0.75 0.20)) 15 15))))
       (objc:invoke badge "setName:" "badge")
       (let ((count (add badge (text "" 11 (ui:color 0.15 0.12 0.12)))))
@@ -449,10 +483,11 @@ won, and what a tap does."
          (objc:invoke (box-label box) "setText:" (princ-to-string (box-count box)))))
       (:box-done
        (let ((box (first arguments)))
+         (haptic 1)
          (vanish (box-node box) 0.25d0)
          (setf (box-node box) nil (box-label box) nil)))
       (:won
-       (haptic 2)
+       (notify :success)
        (sound "won")
        (unlock (+ *level-index* 2))
        (let ((stars (stars game *hinted*)))
@@ -465,7 +500,7 @@ won, and what a tap does."
                                        (clock (game-time game)) (clock (level-par (game-level game)))
                                        *hinted*))))
       (:lost
-       (haptic 2)
+       (notify :error)
        (sound "lost")
        (show-overlay "Stuck!" "No ants can reach a cube. Tap to retry." (ui:color 1.0 0.55 0.45))))))
 
@@ -616,10 +651,31 @@ timer, once the note has been drawn."
 
 (defvar *failed* nil "Set when a frame signals, so one error is reported once.")
 
+;;; The scene takes the view's size (resize fill), and the world, laid out
+;;; on a 390x800 board, is scaled to fit and centred on it: the board shows
+;;; whole on any phone, with the scene's green, not black bars, around it.
+
+(defvar *fitted* nil "The scene size the world was last fitted to.")
+
+(defun fit-world (&optional force)
+  (when (and *scene* *world*)
+    (let* ((size (objc:invoke *scene* "size"))
+           (w (aref size 0))
+           (h (aref size 1)))
+      (when (and (plusp w) (plusp h)
+                 (or force (not (equalp size *fitted*))))
+        (setf *fitted* size)
+        (let ((scale (min (/ w *scene-width*) (/ h *scene-height*))))
+          (objc:invoke *world* "setScale:" scale)
+          (objc:invoke *world* "setPosition:"
+                       (point (/ (- w (* scale *scene-width*)) 2)
+                              (/ (- h (* scale *scene-height*)) 2))))))))
+
 (objc:define-objc-method ("update:" :void)
     ((self ant-scene) (time :double))
   (let ((dt (if *last-time* (min 0.05d0 (max 0d0 (- time *last-time*))) (/ 1d0 60))))
     (setf *last-time* time)
+    (fit-world)
     (unless *failed*
       (handler-case (frame dt)
         (error (condition)
@@ -653,6 +709,10 @@ timer, once the note has been drawn."
            (show-picker))
           ((within x y *settings-x* *slot-y* 24 24)
            (show-settings))
+          ((within x y *settings-x* (restart-y) 24 24)
+           (haptic 0)
+           (sound "tap")
+           (start-level *level-index*))
           (*overlay*
            (start-level (if (eq (game-state game) :won) (1+ *level-index*) *level-index*)))
           ((within x y 351 776 32 20)
@@ -725,7 +785,7 @@ timer, once the note has been drawn."
          (bottom (picker-bottom))
          (picker (z (objc:invoke "SKNode" "node") 200)))
     ;; A shade over the round; a tap on it closes the picker.
-    (add picker (at (rect-sprite (ui:color 0 0 0 0.45) *scene-width* *scene-height*)
+    (add picker (at (rect-sprite (ui:color 0 0 0 0.45) (* 3 *scene-width*) (* 3 *scene-height*))
                     (/ *scene-width* 2) (/ *scene-height* 2)))
     (add picker (at (rounded 360 (- top bottom) 18 (ui:color 0.08 0.08 0.10 0.95) (ui:color 1 1 1 0.45) 2)
                     (/ *scene-width* 2) (/ (+ top bottom) 2)))
@@ -787,30 +847,38 @@ the panel, closes the picker."
 
 (defparameter *settings-y* 430d0 "The middle of the settings panel.")
 
-(defun settings-switch-y () (+ *settings-y* 10))
-(defun settings-done-y () (- *settings-y* 62))
+(defparameter *settings-rows*
+  '(("Time and stars" "Score each round against par" "no scoring")
+    ("Sound" "Plops, taps and chimes" "no sound")
+    ("Vibration" "Taps as the ants go home" "no vibration"))
+  "Each switch: its label, what it means, and the default that turns it off.")
+
+(defun settings-row-y (index) (- (+ *settings-y* 75) (* index 70)))
+(defun settings-done-y () (- *settings-y* 135))
 
 (defun show-settings ()
   (close-settings)
-  (let ((panel (z (objc:invoke "SKNode" "node") 200))
-        (on (scoring-p)))
+  (let ((panel (z (objc:invoke "SKNode" "node") 200)))
     ;; A shade over the round; a tap on it closes the settings.
-    (add panel (at (rect-sprite (ui:color 0 0 0 0.45) *scene-width* *scene-height*)
+    (add panel (at (rect-sprite (ui:color 0 0 0 0.45) (* 3 *scene-width*) (* 3 *scene-height*))
                    (/ *scene-width* 2) (/ *scene-height* 2)))
-    (add panel (at (rounded 320 220 18 (ui:color 0.08 0.08 0.10 0.95) (ui:color 1 1 1 0.45) 2)
+    (add panel (at (rounded 320 360 18 (ui:color 0.08 0.08 0.10 0.95) (ui:color 1 1 1 0.45) 2)
                    (/ *scene-width* 2) *settings-y*))
-    (add panel (at (text "Settings" 22 (ui:color 1 1 1)) (/ *scene-width* 2) (+ *settings-y* 76)))
-    ;; Scoring: a label, what it means, and a switch.
-    (dolist (line '(("Time and stars" 17 1 "AvenirNext-DemiBold" 9)
-                    ("Score each round against par" 12 0.6 "AvenirNext-Medium" -12)))
-      (destructuring-bind (string size alpha font dy) line
-        (let ((label (text string size (ui:color 1 1 1 alpha) :font font)))
-          (objc:invoke label "setHorizontalAlignmentMode:" 1) ; left
-          (add panel (at label 52 (+ (settings-switch-y) dy))))))
-    (let ((switch (add panel (at (rounded 54 32 16 (if on (ui:color 0.30 0.78 0.40) (ui:color 1 1 1 0.2))
-                                          (ui:color 1 1 1 0.35) 1.5d0)
-                                 300 (settings-switch-y)))))
-      (add switch (at (ellipse 26 26 (ui:color 1 1 1) (ui:color 0 0 0 0.15)) (if on 11 -11) 0)))
+    (add panel (at (text "Settings" 22 (ui:color 1 1 1)) (/ *scene-width* 2) (+ *settings-y* 141)))
+    ;; Each row: a label, what it means, and a switch.
+    (loop for (title subtitle key) in *settings-rows*
+          for index from 0
+          for y = (settings-row-y index)
+          for on = (zerop (saved key))
+          do (loop for (string size alpha font dy) in `((,title 17 1 "AvenirNext-DemiBold" 9)
+                                                        (,subtitle 12 0.6 "AvenirNext-Medium" -12))
+                   do (let ((label (text string size (ui:color 1 1 1 alpha) :font font)))
+                        (objc:invoke label "setHorizontalAlignmentMode:" 1) ; left
+                        (add panel (at label 52 (+ y dy)))))
+             (let ((switch (add panel (at (rounded 54 32 16 (if on (ui:color 0.30 0.78 0.40) (ui:color 1 1 1 0.2))
+                                                   (ui:color 1 1 1 0.35) 1.5d0)
+                                          300 y))))
+               (add switch (at (ellipse 26 26 (ui:color 1 1 1) (ui:color 0 0 0 0.15)) (if on 11 -11) 0))))
     ;; Done.
     (let ((done (add panel (at (rounded 120 40 12 (ui:color 1 1 1 0.14) (ui:color 1 1 1 0.3) 1.5d0)
                                (/ *scene-width* 2) (settings-done-y)))))
@@ -822,23 +890,26 @@ the panel, closes the picker."
     (objc:invoke *settings* "removeFromParent")
     (setf *settings* nil)))
 
-(defun toggle-scoring ()
-  (save "no scoring" (if (scoring-p) 1 0))
+(defun toggle-setting (key)
+  (save key (if (zerop (saved key)) 1 0))
   (objc:invoke *timer* "setHidden:" (not (scoring-p)))
   (show-settings))
 
 (defun settings-tap (x y)
-  "A tap on the scoring row flips it; on Done or outside the panel, closes."
-  (cond ((within x y (/ *scene-width* 2) (settings-switch-y) 150 24)
-         (haptic 0)
-         (toggle-scoring))
-        ((or (within x y (/ *scene-width* 2) (settings-done-y) 60 20)
-             (not (within x y (/ *scene-width* 2) *settings-y* 160 110)))
-         (close-settings))))
+  "A tap on a row flips its switch; on Done or outside the panel, closes."
+  (let ((row (position-if (lambda (index) (within x y (/ *scene-width* 2) (settings-row-y index) 150 28))
+                          (loop for index below (length *settings-rows*) collect index))))
+    (cond (row
+           (toggle-setting (third (nth row *settings-rows*)))
+           (haptic 0))
+          ((or (within x y (/ *scene-width* 2) (settings-done-y) 60 20)
+               (not (within x y (/ *scene-width* 2) *settings-y* 160 180)))
+           (close-settings)))))
 
 (defun tap-view-point (in-view)
-  "A tap at IN-VIEW, a point in the SKView's coordinates (y down)."
-  (let ((in-scene (objc:invoke *scene* "convertPointFromView:" in-view)))
+  "A tap at IN-VIEW, a point in the SKView's coordinates (y down), on the board."
+  (let ((in-scene (objc:invoke *world* "convertPoint:fromNode:"
+                               (objc:invoke *scene* "convertPointFromView:" in-view) *scene*)))
     (tap-at (aref in-scene 0) (aref in-scene 1))))
 
 (defun tapped (recognizer)
@@ -861,8 +932,9 @@ the panel, closes the picker."
 ;;; ANTS_FAST=1 starts at double speed.
 
 (defun autotap (x y)
-  "Tap the scene point (X Y) as a finger would: by way of the view."
-  (tap-view-point (objc:invoke *scene* "convertPointToView:" (point x y))))
+  "Tap the board point (X Y) as a finger would: by way of the view."
+  (tap-view-point (objc:invoke *scene* "convertPointToView:"
+                               (objc:invoke *world* "convertPoint:toNode:" (point x y) *scene*))))
 
 (defvar *overlay-ticks* 0)
 (defvar *careless* nil)
@@ -920,7 +992,7 @@ the panel, closes the picker."
     (let ((scene (objc:invoke (make-instance 'ant-scene) "initWithSize:"
                               (point *scene-width* *scene-height*))))
       (objc:invoke scene "setBackgroundColor:" background)
-      (objc:invoke scene "setScaleMode:" 1)        ; aspect fit
+      (objc:invoke scene "setScaleMode:" 3)        ; resize fill: see FIT-WORLD
       (setf *view* (ui:keep view)
             *scene* (ui:keep scene))
       (setf *fast* (or (= 1 (saved "fast")) (and (ext:getenv "ANTS_FAST") t)))

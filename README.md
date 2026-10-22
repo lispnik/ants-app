@@ -35,8 +35,14 @@ round, and a hinted round earns two stars at most. While the player keeps to
 the level's order, a hint is the next tap of it; off it, the search runs from
 where the round stands, and an order it finds is played out before the hint
 believes it; that can take a second or two, under a note saying so. The
-settings button, left of the slots, turns the scoring off: then there is no
-timer, the picker shows no stars, and a cleared picture just says so.
+settings button, left of the slots, turns off the scoring -- then there is no
+timer, the picker shows no stars, and a cleared picture just says so -- the
+sound, and the vibration: a soft tick as each ant goes home, a firmer one as
+a box empties, and the system's success and error patterns as a round is won
+or lost. The sounds mix with the player's music, so the phone's Silent mode
+silences them. The restart button, under the settings button, starts the
+round again. The board is laid out at 390x800 points and scaled to fit the
+screen's safe area.
 
 ## Building
 
