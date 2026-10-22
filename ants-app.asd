@@ -13,7 +13,7 @@
   :entry-point "ants:start"
   :description "A puzzle game: deploy coloured ant boxes so their ants can carry away a pixel picture of cubes, without filling every slot with boxes whose cubes are buried."
   :version #.(or (uiop:getenv "ANTS_BUILD") "1")
-  :bundle-short-version "1.10.0"
+  :bundle-short-version "1.11.0"
   :serial t
   :depends-on ("objc/uikit")
   :pathname "src"
