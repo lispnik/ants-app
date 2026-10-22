@@ -40,3 +40,6 @@ h2 { font-size: 21px; margin: 32px 0 8px; }
 .card { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 4px 20px; margin: 16px 0; }
 ul { padding-left: 22px; }
 footer { color: var(--muted); font-size: 14px; border-top: 1px solid var(--rule); margin-top: 40px; padding-top: 16px; }
+.banner { display: block; width: 100%; height: auto; border-radius: 16px; margin: 0 0 24px;
+          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

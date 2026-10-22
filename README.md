@@ -84,6 +84,7 @@ tools/testflight.sh --validate   # build and validate, upload nothing
 | `src/test.lisp` | plays every level headless, and fails if one can't be won: `sbcl --script src/test.lisp` |
 | `src/tune.lisp` | works out each level's order and par, and how hard it is: `sbcl --script src/tune.lisp [name ...]` |
 | `tools/make-icon.py` | draws `res/Ants.xcassets` with the standard library |
+| `tools/make-header.py` | draws `docs/header.png`, the 2400x800 banner; `tools/header-title.swift` sets its title |
 | `tools/make-sounds.py` | synthesises `res/sounds/*.wav` with the standard library |
 | `tools/testflight.sh` | App Store build, check, validate, upload |
 
