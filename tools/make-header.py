@@ -41,7 +41,7 @@ LAYOUTS = {
                    cell=19, paintings=[(1060, 150), (1700, 150)],
                    march=(2080, 780, 712, 0.135), ant=(1665, 420, 32, 0.42)),
     "wide": dict(size=(3840, 1646), out="docs/header-3840x1646.png",
-                 title=dict(x=100, lines=[(360, 230), (462, 78), (540, 38)]),
+                 title=dict(x=100, lines=[(330, 230), (432, 78), (505, 38), (553, 38)]),
                  cell=16, paintings=[(730, 150), (1270, 150)],
                  march=(1720, 230, 690, 0.125), ant=(1240, 395, 32, 0.36)),
     "sixteen": dict(size=(5244, 2950), out="docs/header-5244x2950.png",
@@ -229,8 +229,12 @@ def draw(name):
     # the heavy face's A has a wide side bearing.
     k = canvas.k
     title = layout["title"]
-    texts = [("Ants", "AvenirNext-Heavy", "#FFFFFF"), ("Pixel Puzzle", "AvenirNext-DemiBold", TAN),
-             ("93 pictures, cleared ant by ant", "AvenirNext-Medium", "#FFFFFFCC")]
+    # With four lines, the last is split in two.
+    tagline = ["Hundreds of pictures, cleared ant by ant"]
+    if len(title["lines"]) == 4:
+        tagline = ["Hundreds of pictures,", "cleared ant by ant"]
+    texts = [("Ants", "AvenirNext-Heavy", "#FFFFFF"), ("Pixel Puzzle", "AvenirNext-DemiBold", TAN)] + \
+            [(line, "AvenirNext-Medium", "#FFFFFFCC") for line in tagline]
     spec = [dict(text=text, font=font, colour=colour, size=size * k, baseline=baseline * k,
                  x=None if title["x"] == "centre" else (title["x"] + (12 if i else 0)) * k)
             for i, ((text, font, colour), (baseline, size)) in enumerate(zip(texts, title["lines"]))]
