@@ -40,10 +40,12 @@ LAYOUTS = {
                    title=dict(x=112, lines=[(390, 260), (500, 86), (585, 42)]),
                    cell=19, paintings=[(1060, 150), (1700, 150)],
                    march=(2080, 780, 712, 0.135), ant=(1665, 420, 32, 0.42)),
+    # Centred: App Store layouts crop the sides of this one, so the title
+    # keeps to the middle and only the paintings reach the edges.
     "wide": dict(size=(3840, 1646), out="docs/header-3840x1646.png",
-                 title=dict(x=100, lines=[(330, 230), (432, 78), (505, 38), (553, 38)]),
-                 cell=16, paintings=[(730, 150), (1270, 150)],
-                 march=(1720, 230, 690, 0.125), ant=(1240, 395, 32, 0.36)),
+                 title=dict(x="centre", lines=[(345, 230), (447, 78), (520, 38)]),
+                 cell=12, paintings=[(110, 215), (1396, 215)],
+                 march=(1640, 230, 700, 0.12), ant=(1500, 420, 150, 0.3)),
     "sixteen": dict(size=(5244, 2950), out="docs/header-5244x2950.png",
                     title=dict(x="centre", lines=[(215, 180), (295, 62), (350, 30)]),
                     cell=11, paintings=[(360, 400), (730, 400)],
