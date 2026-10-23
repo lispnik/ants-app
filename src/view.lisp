@@ -125,6 +125,13 @@ opposite, so that it is on until turned off."
     (objc:invoke node "setLineWidth:" (float line-width 1d0))
     node))
 
+(defun button-sprite (name)
+  "A round button, from res/buttons (tools/make-buttons.py): a 50-point
+image at 3x, its cube 42 points across."
+  (let ((node (objc:invoke "SKSpriteNode" "spriteNodeWithImageNamed:" (format nil "button-~a.png" name))))
+    (objc:invoke node "setSize:" (point 50 50))
+    node))
+
 (defun ellipse (width height fill stroke)
   (let ((node (objc:invoke "SKShapeNode" "shapeNodeWithEllipseOfSize:" (point width height))))
     (objc:invoke node "setFillColor:" fill)
@@ -337,20 +344,15 @@ tappable, the rows behind dimmed, the rest hidden and counted."
     ;; The hint button, right of the slots.
     (setf *hints-left* *hints-per-round*
           *hinted* nil
-          *hint-button* (add *world* (at (rounded 40 40 20 (ui:color 1 1 1 0.15) (ui:color 1 1 1 0.4) 1.5d0)
-                                         *hint-x* *slot-y*)))
-    (add *hint-button* (at (text "?" 22 (ui:color 1 1 1)) 0 0))
-    ;; The settings button, left of the slots.
-    (let ((button (add *world* (at (rounded 40 40 20 (ui:color 1 1 1 0.15) (ui:color 1 1 1 0.4) 1.5d0)
-                                   *settings-x* *slot-y*))))
-      (add button (at (text "⚙︎" 22 (ui:color 1 1 1) :font "AvenirNext-Medium") 0 1)))
-    ;; The restart button, under it.
-    (let ((button (add *world* (at (rounded 40 40 20 (ui:color 1 1 1 0.15) (ui:color 1 1 1 0.4) 1.5d0)
-                                   *settings-x* (restart-y)))))
-      (add button (at (text "↻" 22 (ui:color 1 1 1) :font "AvenirNext-DemiBold") 0 0)))
-    (let ((badge (add *hint-button* (at (rounded 18 18 9 (ui:color 0.95 0.75 0.20)) 15 15))))
+          *hint-button* (add *world* (at (button-sprite "hint") *hint-x* *slot-y*)))
+    ;; The settings button, left of the slots, and the restart button under it.
+    (add *world* (at (button-sprite "settings") *settings-x* *slot-y*))
+    (add *world* (at (button-sprite "restart") *settings-x* (restart-y)))
+    (let ((badge (add *hint-button* (z (at (rounded 20 20 10 (ui:color 0.99 0.84 0.22) (ui:color 0.11 0.05 0.06) 1.5d0)
+                                           18 19)
+                                       1))))
       (objc:invoke badge "setName:" "badge")
-      (let ((count (add badge (text "" 11 (ui:color 0.15 0.12 0.12)))))
+      (let ((count (add badge (text "" 12 (ui:color 0.15 0.12 0.12)))))
         (objc:invoke count "setName:" "count")))
     (show-hints)
     ;; The plate and the picture on it.

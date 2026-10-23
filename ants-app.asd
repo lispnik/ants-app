@@ -43,7 +43,10 @@
   ;; tools/make-sounds.py synthesises these.  In the bundle's root, where
   ;; SpriteKit's playSoundFileNamed: looks.
   :bundle-resources ("res/sounds/tap.wav" "res/sounds/plop.wav" "res/sounds/hint.wav"
-                     "res/sounds/won.wav" "res/sounds/lost.wav")
+                     "res/sounds/won.wav" "res/sounds/lost.wav"
+                     ;; tools/make-buttons.py draws these.
+                     "res/buttons/button-settings.png" "res/buttons/button-hint.png"
+                     "res/buttons/button-restart.png")
   :bundle-frameworks ("UIKit" "Foundation" "CoreGraphics" "SpriteKit" "AVFoundation")
 
   :code-signing-identity #.(or (uiop:getenv "IOS_SIGNING_IDENTITY") :automatic)
