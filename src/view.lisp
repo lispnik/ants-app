@@ -653,25 +653,30 @@ timer, once the note has been drawn."
 
 (defvar *failed* nil "Set when a frame signals, so one error is reported once.")
 
-;;; The scene takes the view's size (resize fill), and the world, laid out
-;;; on a 390x800 board, is scaled to fit and centred on it: the board shows
-;;; whole on any phone, with the scene's green, not black bars, around it.
+;;; The view fills the screen and the scene takes its size (resize fill).
+;;; The world, laid out on a 390x800 board, is scaled to fit the safe area
+;;; and centred in it: the board shows whole on any phone, clear of the
+;;; camera and the home bar, while the scene's green -- and the shade under
+;;; the picker and the settings -- reach the screen's edges.
 
-(defvar *fitted* nil "The scene size the world was last fitted to.")
+(defvar *fitted* nil "The scene size and safe insets the world was last fitted to.")
 
 (defun fit-world (&optional force)
   (when (and *scene* *world*)
     (let* ((size (objc:invoke *scene* "size"))
-           (w (aref size 0))
-           (h (aref size 1)))
+           (insets (objc:invoke *view* "safeAreaInsets"))    ; top left bottom right
+           (left (aref insets 1))
+           (bottom (aref insets 2))
+           (w (- (aref size 0) left (aref insets 3)))
+           (h (- (aref size 1) (aref insets 0) bottom)))
       (when (and (plusp w) (plusp h)
-                 (or force (not (equalp size *fitted*))))
-        (setf *fitted* size)
+                 (or force (not (equalp (list size insets) *fitted*))))
+        (setf *fitted* (list size insets))
         (let ((scale (min (/ w *scene-width*) (/ h *scene-height*))))
           (objc:invoke *world* "setScale:" scale)
           (objc:invoke *world* "setPosition:"
-                       (point (/ (- w (* scale *scene-width*)) 2)
-                              (/ (- h (* scale *scene-height*)) 2))))))))
+                       (point (+ left (/ (- w (* scale *scene-width*)) 2))
+                              (+ bottom (/ (- h (* scale *scene-height*)) 2)))))))))
 
 (objc:define-objc-method ("update:" :void)
     ((self ant-scene) (time :double))
@@ -982,15 +987,14 @@ the panel, closes the picker."
 (defun start ()
   (objc:ensure-objc-initialized)
   (let* ((root (ui:root-view))
-         (safe (objc:invoke root "safeAreaLayoutGuide"))
          (view (ui:new "SKView"))
          (background (ui:color 0.26 0.34 0.22)))
     (objc:invoke root "setBackgroundColor:" background)
     (objc:invoke root "addSubview:" view)
-    (ui:pin view "topAnchor" safe "topAnchor")
-    (ui:pin view "bottomAnchor" safe "bottomAnchor")
-    (ui:pin view "leadingAnchor" safe "leadingAnchor")
-    (ui:pin view "trailingAnchor" safe "trailingAnchor")
+    (ui:pin view "topAnchor" root "topAnchor")
+    (ui:pin view "bottomAnchor" root "bottomAnchor")
+    (ui:pin view "leadingAnchor" root "leadingAnchor")
+    (ui:pin view "trailingAnchor" root "trailingAnchor")
     (let ((scene (objc:invoke (make-instance 'ant-scene) "initWithSize:"
                               (point *scene-width* *scene-height*))))
       (objc:invoke scene "setBackgroundColor:" background)
