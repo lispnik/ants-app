@@ -147,6 +147,14 @@ image at 3x, its cube 42 points across."
     (objc:invoke node "setVerticalAlignmentMode:" 1) ; centre
     node))
 
+(defun fit-text (node width size)
+  "Set label NODE in SIZE, smaller if need be so it is no wider than WIDTH."
+  (objc:invoke node "setFontSize:" (float size 1d0))
+  (let ((wide (aref (objc:invoke node "frame") 2)))
+    (when (> wide width)
+      (objc:invoke node "setFontSize:" (float (* size (/ width wide)) 1d0))))
+  node)
+
 ;;; SKActions.
 
 (defun action (name &rest arguments)
@@ -306,7 +314,9 @@ tappable, the rows behind dimmed, the rest hidden and counted."
   (unless (eql *shown-left* (game-cubes-left game))
     (setf *shown-left* (game-cubes-left game))
     (objc:invoke *status* "setText:"
-                 (format nil "~a  ·  ~d left" (level-name (game-level game)) (game-cubes-left game))))
+                 (format nil "~a  ·  ~d left" (level-name (game-level game)) (game-cubes-left game)))
+    ;; Between the level counter and the 2x button.
+    (fit-text *status* 222 18))
   (let ((seconds (floor (game-time game))))
     (unless (eql *shown-seconds* seconds)
       (setf *shown-seconds* seconds)
@@ -815,8 +825,9 @@ timer, once the note has been drawn."
                                     (if current 3 1.5d0))))
                (objc:invoke button "setName:" (format nil "row~d" row))
                (let ((stars (if (and playable (scoring-p)) (best-stars level) 0)))
-                 (add button (at (text (format nil "~d   ~a" (1+ row) (if playable (level-name level) "Locked"))
-                                       15 (ui:color 1 1 1 (if playable 1 0.35)) :font "AvenirNext-DemiBold")
+                 (add button (at (fit-text (text (format nil "~d   ~a" (1+ row) (if playable (level-name level) "Locked"))
+                                                 15 (ui:color 1 1 1 (if playable 1 0.35)) :font "AvenirNext-DemiBold")
+                                           144 15)
                                  0 (if (plusp stars) 6 0)))
                  (when (plusp stars)
                    (add button (at (text (star-string stars) 11 (ui:color 0.98 0.80 0.25)) 0 -11))))
