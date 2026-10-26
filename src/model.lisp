@@ -3817,9 +3817,10 @@ fast as slots come free.  Whether it is won, and the game's time at the end."
 ;;; Hints and stars.
 
 (defparameter *check-steps* (list (/ 1d0 30) (/ 1d0 60) (/ 1d0 120))
-  "Frame steps an order must win at to be trusted: a 60Hz screen's at double
-speed, a 60Hz screen's, and a 120Hz screen's.  Ants are chaotic enough that
-an order that wins at one step can lose at another.")
+  "Frame steps an order must win at to be trusted: a 30Hz screen's, a 60Hz
+screen's, and a 120Hz screen's.  Ants are chaotic enough that an order that
+wins at one step can lose at another.  At 2x and 5x the view takes more steps
+a frame, not longer ones, so these cover every speed.")
 
 (defun play-out-checked (game order)
   "Whether ORDER wins from GAME at every one of *CHECK-STEPS*; and the

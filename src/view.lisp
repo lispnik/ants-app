@@ -26,7 +26,8 @@
 (defvar *shown-seconds* nil "The whole seconds the timer last showed.")
 (defvar *picker* nil "The level picker, while it is open.")
 (defvar *settings* nil "The settings panel, while it is open.")
-(defvar *fast* nil "Whether the ants go at double speed; the 2x button toggles it.")
+(defparameter *paces* '(1 2 5) "The speeds the speed button steps through, round and round.")
+(defvar *pace* 1 "How many times normal speed the ants go at, one of *PACES*.")
 (defvar *fast-button* nil)
 (defvar *hint-button* nil)
 (defvar *hints-left* 0 "Hints still to be had this round.")
@@ -349,7 +350,9 @@ tappable, the rows behind dimmed, the rest hidden and counted."
                            (ui:color 1 1 1) :font "AvenirNext-DemiBold")
                      40 776))
     (setf *fast-button* (add *world* (at (rounded 56 28 8 (ui:color 1 1 1 0.15)) 351 776)))
-    (add *fast-button* (text "2×" 15 (ui:color 1 1 1) :font "AvenirNext-DemiBold"))
+    (let ((label (text "2×" 15 (ui:color 1 1 1) :font "AvenirNext-DemiBold")))
+      (objc:invoke label "setName:" "label")
+      (add *fast-button* label))
     (show-speed)
     ;; The hint button, right of the slots.
     (setf *hints-left* *hints-per-round*
@@ -541,19 +544,28 @@ The sway is drawn only: it never takes an ant off its route."
           (objc:invoke node "setZRotation:"
                        (+ (- heading (/ pi 2)) (* *wobble* (cos step)))))))))
 
-(defun pace ()
-  (if *fast* 2 1))
+(defun saved-pace ()
+  "The pace kept across launches.  Saved as \"fast\", 0, 1 or 2, an index
+into *PACES*: 1 was all a fast round could be, before 5x."
+  (or (nth (saved "fast") *paces*) 1))
 
 (defun show-speed ()
-  "Light the 2x button when it is on, and run the round's animations -- jumps,
-rests, pickups -- at the same pace as the model."
+  "Show the pace on the speed button -- 2x, unlit, at normal speed; lit
+yellow at 2x, orange at 5x -- and run the round's animations (jumps, rests,
+pickups) at the same pace as the model."
+  (objc:invoke (objc:invoke *fast-button* "childNodeWithName:" "label") "setText:"
+               (format nil "~d×" (max 2 *pace*)))
   (objc:invoke *fast-button* "setFillColor:"
-               (if *fast* (ui:color 0.95 0.75 0.20 0.9) (ui:color 1 1 1 0.15)))
-  (objc:invoke *world* "setSpeed:" (float (pace) 1d0)))
+               (case *pace*
+                 (1 (ui:color 1 1 1 0.15))
+                 (2 (ui:color 0.95 0.75 0.20 0.9))
+                 (t (ui:color 0.98 0.50 0.16 0.95))))
+  (objc:invoke *world* "setSpeed:" (float *pace* 1d0)))
 
-(defun toggle-speed ()
-  (setf *fast* (not *fast*))
-  (save "fast" (if *fast* 1 0))
+(defun cycle-speed ()
+  "The speed button: normal, 2x, 5x, and round to normal again."
+  (setf *pace* (or (second (member *pace* *paces*)) (first *paces*)))
+  (save "fast" (position *pace* *paces*))
   (haptic 0)
   (show-speed))
 
@@ -648,7 +660,11 @@ timer, once the note has been drawn."
   (let ((game *game*))
     ;; The round holds still while the picker or the settings are open.
     (when (and game (not *picker*) (not *settings*))
-      (step-game game (* dt (pace)))
+      ;; Faster, the model takes more steps a frame, not longer ones: its
+      ;; steps stay the screen's frame time, which the stored orders are
+      ;; checked at (see *CHECK-STEPS*).
+      (dotimes (i *pace*)
+        (step-game game dt))
       (dolist (event (take-events game))
         (handle game event))
       (draw-ants game)
@@ -733,7 +749,7 @@ timer, once the note has been drawn."
           (*overlay*
            (start-level (if (eq (game-state game) :won) (1+ *level-index*) *level-index*)))
           ((within x y 351 776 32 20)
-           (toggle-speed))
+           (cycle-speed))
           ((within x y *hint-x* *slot-y* 24 24)
            (ask-hint game))
           (t
@@ -947,7 +963,7 @@ the panel, closes the picker."
 ;;; find their own way; ANTS_LEVEL=n starts at level n,
 ;;; from 1, instead of the saved one; ANTS_PICKER=1 opens the level picker,
 ;;; and ANTS_SETTINGS=1 the settings;
-;;; ANTS_FAST=1 starts at double speed.
+;;; ANTS_FAST=1 starts at double speed, ANTS_FAST=5 at five times.
 
 (defun autotap (x y)
   "Tap the board point (X Y) as a finger would: by way of the view."
@@ -1012,7 +1028,10 @@ the panel, closes the picker."
       (objc:invoke scene "setScaleMode:" 3)        ; resize fill: see FIT-WORLD
       (setf *view* (ui:keep view)
             *scene* (ui:keep scene))
-      (setf *fast* (or (= 1 (saved "fast")) (and (ext:getenv "ANTS_FAST") t)))
+      (setf *pace* (let ((fast (ext:getenv "ANTS_FAST")))
+                     (cond ((null fast) (saved-pace))
+                           ((equal fast "5") 5)
+                           (t 2))))
       (objc:invoke (objc:invoke "AVAudioSession" "sharedInstance") "setCategory:error:"
                    "AVAudioSessionCategoryAmbient" nil)
       (start-level (let ((n (ext:getenv "ANTS_LEVEL")))

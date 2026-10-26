@@ -21,13 +21,14 @@ they come in, finds orders that clear the plate; each is played out in the
 real game, ants walking and resting, and the fastest that wins is improved a
 tap at a time. Ants are chaotic -- a frame a little longer or shorter can
 send one to a different cube -- so an order counts only if it wins at the
-frame steps of a 60Hz screen, the same at double speed, and a 120Hz screen;
+frame steps of a 30Hz, a 60Hz and a 120Hz screen (at 2× and 5× the game takes
+more steps a frame, not longer ones, so these cover every speed);
 its slowest time is the picture's par. `src/test.lisp` plays every level's
 order again and fails unless each wins in its par.
 
 Clearing a picture unlocks the next; the level counter at the top left opens
 a picker of the unlocked ones, twenty to a page, and the app reopens where it
-was left. The 2× button at the top right doubles the ants' speed. A won round
+was left. The speed button at the top right steps through 2×, 5× and back to normal speed. A won round
 earns one to three stars, by its time against the par, and the picker shows
 the best; the round's time and the par show between the picture and the
 slots. The ? button beside the slots points at a box to tap, three times a
@@ -107,4 +108,4 @@ random (and usually loses), `ANTS_AUTOPLAY=hints` presses the hint button
 before each move while it has hints, `ANTS_AUTOPLAY=astray` taps two columns
 at random first, `ANTS_LEVEL=n` starts at level n instead of the saved one,
 `ANTS_PICKER=1` opens the level picker, `ANTS_SETTINGS=1` the settings, and
-`ANTS_FAST=1` starts at double speed.
+`ANTS_FAST=1` starts at double speed, and `ANTS_FAST=5` at five times.
