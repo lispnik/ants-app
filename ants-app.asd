@@ -37,7 +37,10 @@
   ;; one deciding, and the root controller here is the shim's, not ours.
   :bundle-info-plist (("UIViewControllerBasedStatusBarAppearance" . :false)
                       ;; Export compliance, answered: the game encrypts nothing.
-                      ("ITSAppUsesNonExemptEncryption" . :false))
+                      ("ITSAppUsesNonExemptEncryption" . :false)
+                      ;; A puzzle game, and iOS's Game Mode on while it plays.
+                      ("LSApplicationCategoryType" . "public.app-category.puzzle-games")
+                      ("GCSupportsGameMode" . :true))
   ;; 1024x1024 with no alpha; tools/make-icon.py draws it.
   :bundle-icon "res/Ants.xcassets"
   ;; tools/make-sounds.py synthesises these.  In the bundle's root, where
